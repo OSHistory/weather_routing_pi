@@ -29,6 +29,7 @@
 
 #include <wx/treectrl.h>
 #include <wx/fileconf.h>
+#include <wx/timer.h>
 
 #include "WeatherRoutingUI.h"
 #include "ConfigurationDialog.h"
@@ -117,8 +118,17 @@ public:
     void UpdateCursorPositionDialog();
 
     SettingsDialog m_SettingsDialog;
-
+    //CHANGE: bind original event to var
+    wxCommandEvent configEvent;
 private:
+
+    // CHANGE:
+    void OnLoadConfig( wxCommandEvent& event);
+    void OnRemoveIncomplete (wxTimerEvent& event);
+    void ExportCompleted();
+    void ProcessNextConfigFile();
+    void BuildConfFilesList();
+    void ExportRouteInfoAsCsv(wxString csv_path);
 
     void OnNewPosition( wxCommandEvent& event );
     void OnUpdateBoat( wxCommandEvent& event );
@@ -148,6 +158,7 @@ private:
     void OnGoTo( wxCommandEvent& event );
     void OnDelete( wxCommandEvent& event );
     void OnDeleteAll( wxCommandEvent& event );
+    void OnRemoveIncomplete( wxCommandEvent& event);
     void OnFilter( wxCommandEvent& event );
     void OnExport( wxCommandEvent& event );
     void OnExportAll( wxCommandEvent& event );
@@ -176,8 +187,9 @@ private:
     void UpdateItem(long index, bool stateonly=false);
 
     RouteMap *SelectedRouteMap();
-    void Export(RouteMapOverlay &routemapoverlay);
-
+    bool Export(RouteMapOverlay &routemapoverlay);
+    // overload to export with name
+    bool Export(RouteMapOverlay &routemapoverlay, wxString routeName);
     void Start(RouteMapOverlay *routemapoverlay);
     void StartAll();
     void Stop();
@@ -192,10 +204,18 @@ private:
 
     wxTimer m_tCompute, m_tHideConfiguration;
 
+    //CHANGE: Hard coded list of config files to process
+    int configCnt;
+    bool batchRunning;
+    bool m_firstRound;
+    std::vector<std::string> confPaths;
+    wxString m_confFilesInfoPath; // holds paths of configuration files to process
+    wxCommandEvent m_fakeEvent; // Used to simulate GUI Interactions by calling their callback methods // note: event is mostly not actually used
+
     bool m_bRunning;
     wxTimeSpan m_RunTime;
     wxDateTime m_StartTime;
-
+    wxTimer m_timer;
     wxString m_default_configuration_path;
 
     int m_RoutesToRun;

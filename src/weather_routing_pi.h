@@ -120,14 +120,18 @@ public:
       static wxString StandardPath();
       void ShowMenuItems(bool show);
 
+      // CHANGE: public function to allow reloading of configuration file
+      void LoadConfigurationFile();
       double m_boat_lat, m_boat_lon;
       double m_cursor_lat, m_cursor_lon;
+
 
 private:
       void OnCursorLatLonTimer( wxTimerEvent & );
 
-      bool LoadConfig(void);
       bool SaveConfig(void);
+
+      bool LoadConfig(void);
 
       wxFileConfig     *m_pconfig;
       wxWindow         *m_parent_window;

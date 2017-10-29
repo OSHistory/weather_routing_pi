@@ -25,7 +25,6 @@
 
 #include <wx/wx.h>
 
-#include "ocpn_plugin.h"
 #include "wrdc.h"
 #include "wx/jsonreader.h"
 #include "wx/jsonwriter.h"
@@ -33,6 +32,8 @@
 #include "Utilities.h"
 #include "Boat.h"
 #include "RouteMapOverlay.h"
+
+#include "ocpn_plugin.h"
 #include "SettingsDialog.h"
 
 RouteMapOverlayThread::RouteMapOverlayThread(RouteMapOverlay &routemapoverlay)
@@ -86,6 +87,7 @@ bool RouteMapOverlay::Start(wxString &error)
 
     m_Thread = new RouteMapOverlayThread(*this);
     m_Thread->Run();
+
     return true;
 }
 

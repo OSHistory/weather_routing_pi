@@ -33,10 +33,9 @@
 #include <math.h>
 #include <time.h>
 
-#include "ocpn_plugin.h"
-
 #include "Utilities.h"
 #include "Boat.h"
+#include "ocpn_plugin.h"
 #include "RouteMapOverlay.h"
 
 #include "WeatherRouting.h"

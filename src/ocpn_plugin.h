@@ -616,6 +616,18 @@ extern "C"  DECL_EXP void DimeWindow(wxWindow *);
 
 extern "C"  DECL_EXP void JumpToPosition(double lat, double lon, double scale);
 
+
+// PERSONAL API ADDITIONS
+// CHANGE: useless function to test plugin-API
+extern "C" DECL_EXP void sayHi();
+
+// CHANGE
+extern "C" DECL_EXP void exportGpx(wxString file_path);
+
+// CHANGE
+extern "C" DECL_EXP void deleteAllTracks();
+
+
 /* API 1.9  adds some common cartographic functions to avoid unnecessary code duplication */
 /* Study the original OpenCPN source (georef.c) for functional definitions  */
 
@@ -731,7 +743,7 @@ public:
     virtual int GetNoCOVRTablePoints(int iTable);
     virtual int  GetNoCOVRTablenPoints(int iTable);
     virtual float *GetNoCOVRTableHead(int iTable);
-    
+
 };
 
 

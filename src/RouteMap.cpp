@@ -71,7 +71,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "ocpn_plugin.h"
 #include "GribRecordSet.h"
 
 #include "Utilities.h"
@@ -80,6 +79,7 @@
 #include "weather_routing_pi.h"
 
 #include "georef.h"
+#include "ocpn_plugin.h"
 #include "wx/jsonreader.h"
 #include "wx/jsonwriter.h"
 

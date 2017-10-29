@@ -431,8 +431,19 @@ void weather_routing_pi::OnCursorLatLonTimer( wxTimerEvent & )
     }
 }
 
+// CHANGE: public method to reload a configuration file
+void weather_routing_pi::LoadConfigurationFile()
+{
+	bool loaded;
+	loaded = LoadConfig();
+	if (loaded) {
+		std::cout << "Configuration file has been reloaded" << std::endl;
+	}
+}
+
 bool weather_routing_pi::LoadConfig(void)
 {
+
       wxFileConfig *pConf = (wxFileConfig *)m_pconfig;
 
       if(!pConf)
@@ -444,6 +455,7 @@ bool weather_routing_pi::LoadConfig(void)
 
 bool weather_routing_pi::SaveConfig(void)
 {
+
       wxFileConfig *pConf = (wxFileConfig *)m_pconfig;
 
       if(!pConf)
