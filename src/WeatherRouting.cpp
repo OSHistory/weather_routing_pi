@@ -2282,8 +2282,7 @@ void WeatherRouting::Start(RouteMapOverlay *routemapoverlay)
 	//std::cout << "Starting single route..." << std::endl;
     if(!routemapoverlay ||
        (routemapoverlay->Finished() &&
-        !routemapoverlay->GribFailed() &&
-        !routemapoverlay->ClimatologyFailed())) {
+        !routemapoverlay->GribFailed())) {
     	std::cout << "Returning from start()" << std::endl;
     	return;
     }
