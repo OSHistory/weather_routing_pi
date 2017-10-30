@@ -42,6 +42,7 @@
 #include <sstream>
 #include <string>
 
+#include <wx/glcanvas.h>
 #include "tinyxml/tinyxml.h"
 
 #include "Utilities.h"
@@ -91,6 +92,16 @@ static const char *eye[]={
 
 WeatherRoute::WeatherRoute() : routemapoverlay(new RouteMapOverlay) {}
 WeatherRoute::~WeatherRoute() { delete routemapoverlay; }
+
+ const wxString WeatherRouting::column_names[NUM_COLS] = {_T(""), _("Start"), _("Start Time"),
+                                                          _("End"), _("End Time"), _("Time"), _("Distance"),
+                                                          _("Avg Speed"), _("Max Speed"),
+                                                          _("Avg Speed Ground"), _("Max Speed Ground"),
+                                                          _("Avg Wind"), _("Max Wind"),
+                                                          _("Avg Current"), _("Max Current"),
+                                                          _("Avg Swell"), _("Max Swell"),
+                                                          _("Upwind Percentage"),
+                                                          _("Port Starboard"), _("Tacks"), _("State")};
 
 static int sortcol, sortorder = 1;
 // sort callback. Sort by body.
@@ -190,6 +201,7 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
     pConf->Read ( _T ( "DialogWidth" ), &s.x, s.x);
     pConf->Read ( _T ( "DialogHeight" ), &s.y, s.y);
     SetSize(s);
+    pConf->Read ( _T ( "DialogSplit" ), &sashpos, 0);
 
     /* periodically check for updates from computation thread */
     m_tCompute.Connect(wxEVT_TIMER, wxTimerEventHandler
@@ -197,6 +209,9 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
 
     m_tHideConfiguration.Connect(wxEVT_TIMER, wxTimerEventHandler
                        ( WeatherRouting::OnHideConfigurationTimer ), NULL, this);
+
+    Connect(wxEVT_IDLE, wxTimerEventHandler
+                       ( WeatherRouting::OnRenderedTimer ), NULL, this);
 
     SetEnableConfigurationMenu();
 }
@@ -217,8 +232,9 @@ WeatherRouting::~WeatherRouting( )
     wxSize s = GetSize();
     pConf->Write ( _T ( "DialogWidth" ), s.x);
     pConf->Write ( _T ( "DialogHeight" ), s.y);
+    pConf->Write ( _T ( "DialogSplit" ), m_splitter1->GetSashPosition());
 
-    SaveXML(m_default_configuration_path);
+    SaveXML(m_FileName.GetFullPath());
 
     for(std::list<WeatherRoute*>::iterator it = m_WeatherRoutes.begin();
         it != m_WeatherRoutes.end(); it++)
@@ -285,6 +301,9 @@ void WeatherRouting::ExportRouteInfoAsCsv(wxString csv_path)
 
 void WeatherRouting::Render(wrDC &dc, PlugIn_ViewPort &vp)
 {
+    if (vp.bValid == false)
+        return;
+
     if(!dc.GetDC()) {
         glPushAttrib(GL_LINE_BIT | GL_ENABLE_BIT | GL_HINT_BIT ); //Save state
         glEnable( GL_LINE_SMOOTH );
@@ -353,7 +372,9 @@ void WeatherRouting::AddPosition(double lat, double lon, wxString name)
                 (*it).lat = lat;
                 (*it).lon = lon;
                 m_lPositions->SetItem(index, POSITION_LAT, wxString::Format(_T("%.5f"), lat));
+                m_lPositions->SetColumnWidth(POSITION_LAT, wxLIST_AUTOSIZE);
                 m_lPositions->SetItem(index, POSITION_LON, wxString::Format(_T("%.5f"), lon));
+                m_lPositions->SetColumnWidth(POSITION_LON, wxLIST_AUTOSIZE);
             }
 
             UpdateConfigurations();
@@ -370,7 +391,10 @@ void WeatherRouting::AddPosition(double lat, double lon, wxString name)
     m_lPositions->SetColumnWidth(POSITION_NAME, wxLIST_AUTOSIZE);
 
     m_lPositions->SetItem(index, POSITION_LAT, wxString::Format(_T("%.5f"), lat));
-    m_lPositions->SetItem(index, POSITION_LON, wxString::Format(_T("%.5f"), lon));
+    m_lPositions->SetColumnWidth(POSITION_LAT, wxLIST_AUTOSIZE);
+    // m_lPositions->SetItem(index, POSITION_LON, wxString::Format(_T("%.5f"), lon));
+    // m_lPositions->SetColumnWidth(POSITION_LON, wxLIST_AUTOSIZE);
+
 
     m_ConfigurationDialog.AddSource(name);
     m_ConfigurationBatchDialog.AddSource(name);
@@ -401,6 +425,7 @@ void WeatherRouting::UpdateColumns()
             }
 
             m_lWeatherRoutes->InsertColumn(columns[i], name);
+            m_lWeatherRoutes->SetColumnWidth(columns[i], wxLIST_AUTOSIZE);
         } else
             columns[i] = -1;
     }
@@ -496,12 +521,18 @@ void WeatherRouting::OnNewPosition( wxCommandEvent& event )
         wxString latitude_minutes = dlg.m_tLatitudeMinutes->GetValue();
         latitude_degrees.ToDouble(&lat);
         latitude_minutes.ToDouble(&lat_minutes);
+        lat_minutes = fabs(lat_minutes);
+        if(lat < 0)
+            lat_minutes = -lat_minutes;
         lat += lat_minutes / 60;
 
         wxString longitude_degrees = dlg.m_tLongitudeDegrees->GetValue();
         wxString longitude_minutes = dlg.m_tLongitudeMinutes->GetValue();
         longitude_degrees.ToDouble(&lon);
         longitude_minutes.ToDouble(&lon_minutes);
+        lon_minutes = fabs(lon_minutes);
+        if(lon < 0)
+            lon_minutes = -lon_minutes;
         lon += lon_minutes / 60;
 
         AddPosition(lat, lon, dlg.m_tName->GetValue());
@@ -565,6 +596,7 @@ void WeatherRouting::OnDeletePosition( wxCommandEvent& event )
     wxListItem it;
     it.SetId(index);
     it.SetColumn(0);
+    it.SetMask(wxLIST_MASK_TEXT); // Note use of the mask, somehow it's required for this to work correctly on windows
     m_lPositions->GetItem(it);
     wxString name = it.GetText();
 
@@ -1127,7 +1159,7 @@ void WeatherRouting::OnOpen( wxCommandEvent& event )
 {
     wxString error;
     wxFileDialog openDialog
-        ( this, _( "Select Configuration" ), _T(""), wxT ( "" ),
+        ( this, _( "Select Configuration" ), m_FileName.GetPath(), m_FileName.GetName(),
           wxT ( "XML files (*.xml)|*.XML;*.xml|All files (*.*)|*.*" ),
           wxFD_OPEN  );
 
@@ -1144,7 +1176,7 @@ void WeatherRouting::OnSave( wxCommandEvent& event )
 {
     wxString error;
     wxFileDialog saveDialog
-        ( this, _( "Select Configuration" ), wxEmptyString, wxEmptyString,
+        ( this, _( "Select Configuration" ), m_FileName.GetPath(), m_FileName.GetName(),
           wxT ( "XML files (*.xml)|*.XML;*.xml|All files (*.*)|*.*" ),
           wxFD_SAVE  );
 
@@ -1374,7 +1406,7 @@ void WeatherRouting::OnCursorPosition( wxCommandEvent& event )
 
 void WeatherRouting::OnManual ( wxCommandEvent& event )
 {
-    wxLaunchDefaultBrowser(_T("http://opencpn.org/ocpn/Plugins_external_weather_routing"));
+    wxLaunchDefaultBrowser(_T("https://opencpn.org/wiki/dokuwiki/doku.php?id=opencpn:opencpn_user_manual:toolbar_buttons:plugins:weather:weather_routing"));
 }
 
 void WeatherRouting::OnInformation ( wxCommandEvent& event )
@@ -1535,14 +1567,25 @@ void WeatherRouting::OnHideConfigurationTimer( wxTimerEvent & )
     m_ConfigurationDialog.Hide();
 }
 
+void WeatherRouting::OnRenderedTimer ( wxTimerEvent & )
+{
+    // don't do it until the window system is up and running
+    if ( GetClientSize().GetWidth() > 20 ) {
+        if (!sashpos)
+	    sashpos = GetClientSize().GetWidth() / 5;
+        m_splitter1->SetSashPosition(sashpos, true);
+        Disconnect(wxEVT_IDLE, wxTimerEventHandler(WeatherRouting::OnRenderedTimer ), NULL, this );
+    }
+}
+
 bool WeatherRouting::OpenXML(wxString filename, bool reportfailure)
 {
     TiXmlDocument doc;
     wxString error;
 
     wxFileName fn(filename);
-
     SetTitle(_("Weather Routing") + wxString(_T(" - ")) + fn.GetFullName());
+    m_FileName = fn;
 
     wxProgressDialog *progressdialog = NULL;
     wxDateTime start = wxDateTime::UNow();
@@ -1686,6 +1729,10 @@ failed:
 
 void WeatherRouting::SaveXML(wxString filename)
 {
+    wxFileName fn(filename);
+    SetTitle(_("Weather Routing") + wxString(_T(" - ")) + fn.GetFullName());
+    m_FileName = fn;
+
     TiXmlDocument doc;
     TiXmlDeclaration* decl = new TiXmlDeclaration( "1.0", "utf-8", "" );
     doc.LinkEndChild( decl );
@@ -1947,10 +1994,6 @@ void WeatherRoute::Update(WeatherRouting *wr, bool stateonly)
                 State = _T("");
                 if(routemapoverlay->GribFailed()) {
                     State += _("Grib");
-                    State += _T(": ");
-                }
-                if(routemapoverlay->ClimatologyFailed()) {
-                    State += _("Climatology");
                     State += _T(": ");
                 }
                 if(routemapoverlay->PolarFailed()) {
@@ -2224,6 +2267,11 @@ bool WeatherRouting::Export(RouteMapOverlay &routemapoverlay)
     }
 
     AddPlugInTrack(newTrack);
+    // not done PlugIn_Track DTOR
+    newTrack->pWaypointList->DeleteContents( true );
+    newTrack->pWaypointList->Clear();
+
+    delete newTrack;
 
     GetParent()->Refresh();
     return true;
@@ -2238,7 +2286,6 @@ void WeatherRouting::Start(RouteMapOverlay *routemapoverlay)
         !routemapoverlay->ClimatologyFailed())) {
     	std::cout << "Returning from start()" << std::endl;
     	return;
-
     }
 
     RouteMapConfiguration configuration = routemapoverlay->GetConfiguration();

@@ -24,6 +24,9 @@
  */
 
 #include <wx/wx.h>
+#include <wx/glcanvas.h>
+
+#include "ocpn_plugin.h"
 #include "LineBufferOverlay.h"
 
 #include "ocpn_plugin.h"
@@ -212,9 +215,9 @@ void LineBufferOverlay::pushWindArrowWithBarbs(LineBuffer &buffer, int x, int y,
         cacheidx = (int)(vkn + 2.5) / 5;
     else if( vkn < 90 )
         cacheidx = (int)(vkn + 5) / 10 + 4;
-    else if (vkn < 400 ) 
+    else if (vkn < 400 )
         cacheidx = 13;
-    else 
+    else
         return;
     buffer.pushTransformedBuffer(m_WindArrowCache[cacheidx], x, y, ang, south);
 }
@@ -223,7 +226,7 @@ void LineBufferOverlay::pushSingleArrow( LineBuffer &buffer, int x, int y, doubl
 {
     int cacheidx = 13;
     int v = (int)(vkn*2. +0.5);
-    
+
     if( v <= 0 )
         return;
     else if( v <= 13 )
@@ -232,4 +235,3 @@ void LineBufferOverlay::pushSingleArrow( LineBuffer &buffer, int x, int y, doubl
         return;
     buffer.pushTransformedBuffer(m_SingleArrow[cacheidx], x, y, ang, south);
 }
-

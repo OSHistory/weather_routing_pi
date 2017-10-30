@@ -483,8 +483,11 @@ void BoatDialog::OnPaintCrossOverChart(wxPaintEvent& event)
     wxWindow *window = dynamic_cast<wxWindow*>(event.GetEventObject());
     if(!window)
         return;
-
+#if wxUSE_GRAPHICS_CONTEXT
     wxGCDC dc(window);
+#else    
+    wxClientDC dc(window);
+#endif    
     dc.SetBackgroundMode(wxTRANSPARENT);
 
     long index = SelectedPolar();
@@ -1035,7 +1038,7 @@ wxString BoatDialog::FormatVMG(double W, double VW)
     Polar &polar = m_Boat.Polars[index];
     double A = isnan(W) ? NAN :
         positive_degrees(Polar::DirectionApparentWind(polar.Speed(W, VW), W, VW));
-    return wxString::Format(_T("%.1f True %.1f Apparent"), W, A);
+    return wxString::Format(_("%.1f True %.1f Apparent"), W, A);
 }
 
 void BoatDialog::UpdateVMG()

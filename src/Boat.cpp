@@ -56,7 +56,8 @@ wxString Boat::OpenXML(wxString filename, bool shortcut)
    
     TiXmlDocument doc;
     if(!doc.LoadFile( filename.mb_str() ))
-        return _("Failed to load file: ") + filename;
+        return _("Failed to load file: ") + filename + _T("\n") +
+            _("It should an xml file describing a boat, not a polar; try editing the boat.");
 
     TiXmlHandle root( doc.RootElement() );
     if(strcmp(doc.RootElement()->Value(), "OpenCPNWeatherRoutingBoat"))
@@ -126,7 +127,15 @@ wxString Boat::SaveXML(wxString filename)
 
         e->SetAttribute("FileName", polar.FileName.mb_str());
         if(!polar.CrossOverRegion.Empty()) {
-            wxString ContoursFileName = polar.FileName + _T(".contours");
+            wxString ContoursPath = weather_routing_pi::StandardPath() +
+                _T("contours") + wxFileName::GetPathSeparator();
+            if (!wxDirExists(ContoursPath))
+                wxMkdir(ContoursPath);
+
+            wxString ContoursFileName = polar.FileName;
+            ContoursFileName.Replace
+                (wxFileName::GetPathSeparator(), _T("!?!"));
+            ContoursFileName = ContoursPath + ContoursFileName + _T(".contours");
             wxFile file;
             if(file.Open(ContoursFileName, wxFile::write)) {
                 e->SetAttribute("CrossOverContours", ContoursFileName.mb_str());

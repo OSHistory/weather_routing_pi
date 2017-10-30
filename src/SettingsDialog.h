@@ -46,6 +46,9 @@ public:
     void OnUpdate( );
     void OnUpdateColumns( wxCommandEvent& event );
     void OnHelp( wxCommandEvent& event );
+    static const wxString column_names[21];
+
+
 };
 
 #endif

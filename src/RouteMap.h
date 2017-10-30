@@ -27,6 +27,8 @@
 
 #include <list>
 
+#include "ODAPI.h"
+
 struct RouteMapConfiguration;
 class IsoRoute;
 class GribRecordSet;
@@ -55,8 +57,8 @@ public:
 
     void GetPlotData(Position *next, double dt,
                      RouteMapConfiguration &configuration, PlotData &data);
-    void GetWindData(RouteMapConfiguration &configuration, double &W, double &VW, int &data_mask);
-    void GetCurrentData(RouteMapConfiguration &configuration, double &C, double &VC, int &data_mask);
+    bool GetWindData(RouteMapConfiguration &configuration, double &W, double &VW, int &data_mask);
+    bool GetCurrentData(RouteMapConfiguration &configuration, double &C, double &VC, int &data_mask);
 
     bool Propagate(IsoRouteList &routelist, RouteMapConfiguration &configuration);
     double PropagateToEnd(RouteMapConfiguration &configuration, double &H, int &data_mask);
@@ -235,7 +237,6 @@ public:
     LOCKING_ACCESSOR(ReachedDestination, m_bReachedDestination)
     LOCKING_ACCESSOR(Valid, m_bValid)
     LOCKING_ACCESSOR(GribFailed, m_bGribFailed)
-    LOCKING_ACCESSOR(ClimatologyFailed, m_bClimatologyFailed)
     LOCKING_ACCESSOR(PolarFailed, m_bPolarFailed)
     LOCKING_ACCESSOR(NoData, m_bNoData)
 
@@ -263,6 +264,9 @@ public:
                                             double *, double *, double &, double &);
     static int (*ClimatologyCycloneTrackCrossings)(double lat1, double lon1, double lat2, double lon2,
                                                    const wxDateTime &date, int dayrange);
+
+    static OD_FindClosestBoundaryLineCrossing ODFindClosestBoundaryLineCrossing;
+    
     static std::list<RouteMapPosition> Positions;
     void Stop() { Lock(); m_bFinished = true; Unlock(); }
     void ResetFinished() { Lock(); m_bFinished = false; Unlock(); }
@@ -286,7 +290,7 @@ private:
 
     RouteMapConfiguration m_Configuration;
     bool m_bFinished, m_bValid;
-    bool m_bReachedDestination, m_bGribFailed, m_bClimatologyFailed, m_bPolarFailed, m_bNoData;
+    bool m_bReachedDestination, m_bGribFailed, m_bPolarFailed, m_bNoData;
 
     wxDateTime m_NewTime;
 };
