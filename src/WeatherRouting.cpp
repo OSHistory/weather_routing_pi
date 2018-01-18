@@ -652,6 +652,7 @@ void WeatherRouting::ProcessNextConfigFile()
 	std::cout << "Processing file: " << std::endl;
 	std::cout << currPath << std::endl;
 	std::cout << "Removing old tracks..." << std::endl;
+  m_RoutesToRun = 0;
     deleteAllTracks();
     // STEP1: Opening configuration file from disk
     //std::cout << "Reloading from configuration file..." << std::endl;
@@ -678,17 +679,17 @@ void WeatherRouting::ProcessNextConfigFile()
     }
     DeleteRouteMaps(allroutemapoverlays);
 	*/
-    GetParent()->Refresh();
+    // GetParent()->Refresh();
 
     OpenXML(currPath, true);
     	//OpenXML(m_default_configuration_path, true);
-    //UpdateConfigurations();
-    //UpdateColumns();
+    UpdateConfigurations();
+    UpdateColumns();
 
     GetParent()->Refresh();
 
-	//std::cout << "Sleeping for 2 seconds..." << std::endl;
-	//usleep(2 * 1000 * 1000);
+	std::cout << "Sleeping for 2 seconds..." << std::endl;
+	usleep(2 * 1000 * 1000);
 
     	// STEP2: Compute all routes
 	/*if (m_bRunning) {
@@ -742,6 +743,7 @@ void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 	batchRunning = true;
 	BuildConfFilesList();
 	ProcessNextConfigFile();
+
 	// Hard code a list with configuration file-paths and gpx-saving-destinations
 	// Loop that list and trigger the same workflow as now
 	// create a private boolean to keep track if new process should be started
@@ -1505,46 +1507,18 @@ void WeatherRouting::OnComputationTimer( wxTimerEvent & )
         return;
        // CHANGE: no more running instances so finished
     } else {
-    	/*std::cout << m_RunningRouteMaps.size() << std::endl;
-    	std::cout << m_WaitingRouteMaps.size() << std::endl;
-    	//TODO: aborts last running thread, should allow to go to zero
-    	if (m_WaitingRouteMaps.size() == 0 && m_RunningRouteMaps.size() <= 1) {*/
     		if (batchRunning) {
-				if (m_bRunning) {
-					//std::cout << "Process is running!" << std::endl;
-					std::cout << "No more routes to run!" << std::endl;
-					//std::cout << m_WaitingRouteMaps.size() << std::endl;
-					ExportCompleted();
-				} else {
-					std::cout << "Process is not running. Restart it..." << std::endl;
-					//wxCommandEvent m_fakeEvent;
-
-					//Stop();
-					//UpdateCurrentConfigurations();
-					//std::cout << "Calling Reset" << std::endl;
-					//m_bRunning = true;
-					//Reset();
-					//UpdateDialogs();
-					OnComputeAll(m_fakeEvent);
-					//StartAll();
-					//UpdateComputeState();
-					m_tCompute.Start(250, true);
-					return;
-					// This ugly hack works, but programmatically would be better
-					// Apparently there is some side effect, that cannot be emulated
-					/*
-					wxUIActionSimulator sim;
-					std::cout << "Triggering Ctrl-A" << std::endl;
-					std::cout << "Need possibly some help (put focus on weahther-routing-window)" << std::endl;
-					sim.Char('A', wxMOD_CONTROL);
-					*/
-					//m_tCompute.Start(250, true);
-
+          // TODO: Check if there is something to export
+          // This part also gets called event if no route computation so far
+          std::cout << "Item Count" << std::endl;
+          std::cout << m_lWeatherRoutes->GetItemCount() << std::endl;
+          ExportCompleted();
+          OnComputeAll(m_fakeEvent);
+          //StartAll();
+          //UpdateComputeState();
+          m_tCompute.Start(250, true);
+          return;
 				}
-    		} else {
-    			std::cout << "Batch is not running!" << std::endl;
-
-    		}
     		/*else {
 				}
     			std::cout << "Restarting Computing via simulated CLick" << std::endl;
@@ -1899,7 +1873,9 @@ void WeatherRouting::UpdateRouteMap(RouteMapOverlay *routemapoverlay)
    parameters but not computed route information */
 void WeatherRoute::Update(WeatherRouting *wr, bool stateonly)
 {
+    std::cout << "Calling Update" << std::endl;
     if(!stateonly) {
+        std::cout << "Calling Update II" << std::endl;
         RouteMapConfiguration configuration = routemapoverlay->GetConfiguration();
 
         BoatFilename = configuration.boatFileName;
@@ -2007,9 +1983,12 @@ void WeatherRoute::Update(WeatherRouting *wr, bool stateonly)
                 State += _("Failed");
             }
         } else {
+            // std::cout << wr->m_WaitingRouteMaps.begin() << std::endl;
+            // std::cout << wr->m_WaitingRouteMaps.end() << std::endl;
             for(std::list<RouteMapOverlay*>::iterator it = wr->m_WaitingRouteMaps.begin();
                 it != wr->m_WaitingRouteMaps.end(); it++)
                 if(*it == routemapoverlay) {
+                    std::cout << "Setting to waiting" << std::endl;
                     State = _("Waiting...");
                     return;
                 }
@@ -2310,8 +2289,9 @@ void WeatherRouting::Start(RouteMapOverlay *routemapoverlay)
     // already running?
     for(std::list<RouteMapOverlay*>::iterator it = m_RunningRouteMaps.begin();
         it != m_RunningRouteMaps.end(); it++)
-        if(*it == routemapoverlay)
-            return;
+        if(*it == routemapoverlay) {
+          return;
+        }
 
     if(!m_bRunning)
         m_StatisticsDialog.SetRunTime(m_RunTime = wxTimeSpan(0));
@@ -2324,6 +2304,8 @@ void WeatherRouting::Start(RouteMapOverlay *routemapoverlay)
 
     routemapoverlay->Reset();
     m_RoutesToRun++;
+    std::cout << m_RoutesToRun << std::endl;
+
     m_WaitingRouteMaps.push_back(routemapoverlay);
     //std::cout << m_WaitingRouteMaps.size() << std::endl;
     SetEnableConfigurationMenu();
