@@ -70,8 +70,8 @@ WeatherRoutingBase::WeatherRoutingBase( wxWindow* parent, wxWindowID id, const w
 
 	m_bExport = new wxButton( sbSizer29->GetStaticBox(), wxID_ANY, _("&Export"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer116->Add( m_bExport, 0, wxALL, 5 );
-	
-	m_bLoadConfig = new wxButton( m_panel12, wxID_ANY, _("Load &Config"), wxDefaultPosition, wxDefaultSize, 0 );
+
+	m_bLoadConfig = new wxButton(sbSizer29->GetStaticBox(), wxID_ANY, _("Load &Config"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer116->Add( m_bLoadConfig, 0, wxALL, 5 );
 
 	m_gProgress = new wxGauge( sbSizer29->GetStaticBox(), wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
