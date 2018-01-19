@@ -216,7 +216,7 @@ void weather_routing_pi::SetPluginMessage(wxString &message_id, wxString &messag
 
         if (v[_T("Day")].AsInt() != -1) {
             wxDateTime time;
-        
+
             time.Set
               (v[_T("Day")].AsInt(), (wxDateTime::Month)v[_T("Month")].AsInt(), v[_T("Year")].AsInt(),
                v[_T("Hour")].AsInt(), v[_T("Minute")].AsInt(), v[_T("Second")].AsInt());
@@ -270,6 +270,9 @@ void weather_routing_pi::SetPluginMessage(wxString &message_id, wxString &messag
                 routemapoverlay->Unlock();
             }
         }
+    }
+    if (message_id == _T("GRIB_FILE_LOAD_REQUEST")) {
+      std::cout << "Calling GRib file from weather routing" << std::endl; 
     }
     if(message_id == _T("CLIMATOLOGY"))
     {
@@ -336,7 +339,7 @@ void weather_routing_pi::SetPluginMessage(wxString &message_id, wxString &messag
                 return;
             }
         }
-        
+
         if(root[wxS("Type")].AsString() == wxS("Response") && root[wxS("Source")].AsString() == wxS("OCPN_DRAW_PI")) {
             if(root[wxS("Msg")].AsString() == wxS("Version") ) {
                 if(root[wxS("MsgId")].AsString() == wxS("version"))
@@ -382,7 +385,7 @@ void weather_routing_pi::OnToolbarToolCallback(int id)
             writer.Write( jMsg, MsgString );
             SendPluginMessage( wxS("OCPN_DRAW_PI"), MsgString );
         }
-        
+
         m_pWeather_Routing->Reset();
     }
 

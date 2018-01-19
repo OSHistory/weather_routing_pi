@@ -657,6 +657,9 @@ void WeatherRouting::ProcessNextConfigFile()
 	std::cout << currPath << std::endl;
 	std::cout << "Removing old tracks..." << std::endl;
 
+  std::cout << "Calling via plugin message" << std::endl;
+  SendPluginMessage(wxString(_T("GRIB_FILE_LOAD_REQUEST")), "/home/foo/my-grib.grib");
+
   m_RoutesToRun = 0;
   // STEP1: Cleaning up old routes and positions
   deleteAllTracks();
