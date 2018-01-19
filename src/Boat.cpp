@@ -63,6 +63,8 @@ wxString Boat::OpenXML(wxString filename, bool shortcut)
     if(strcmp(doc.RootElement()->Value(), "OpenCPNWeatherRoutingBoat"))
         return _("Invalid xml file (no OCPWeatherRoutingBoat node): " + filename);
 
+    bool generateContours = false;
+
     for(TiXmlElement* e = root.FirstChild().Element(); e; e = e->NextSiblingElement()) {
         if(!strcmp(e->Value(), "Polar")) {
             if(!cleared) {
@@ -73,6 +75,10 @@ wxString Boat::OpenXML(wxString filename, bool shortcut)
             Polar polar; //(wxString::FromUTF8(e->Attribute("Name")));
 
             polar.FileName = wxString::FromUTF8(e->Attribute("FileName"));
+            if(!wxFileName::FileExists(polar.FileName))
+	        polar.FileName = weather_routing_pi::StandardPath() + _T("polars") +
+		                 wxFileName::GetPathSeparator() + polar.FileName;
+
             const char *str = e->Attribute("CrossOverContours");
             if(str) {
                 wxFile contours(str);
@@ -85,23 +91,25 @@ wxString Boat::OpenXML(wxString filename, bool shortcut)
                     }
                     delete [] data;
                 }
-            }
+            } else
+	        generateContours = true;
 
             wxString message;
             if(!polar.Open(polar.FileName, message))
                 return message;
 
-//            polar.optimize_tacking = AttributeBool(e, "optimize_tacking", false);
-//            if(polar.optimize_tacking)
-//                polar.OptimizeTackingSpeed();
-            
             polar.m_crossoverpercentage =
                 AttributeDouble(e, "CrossOverPercentage", 0) / 100.0;
             
             Polars.push_back(polar);
         }
     }
-    
+
+    if (generateContours) {
+        GenerateCrossOverChart();
+        SaveXML(filename);
+    }
+
     m_last_filename = filename;
     m_last_filetime = last_filetime;
     return _T("");
@@ -134,17 +142,20 @@ wxString Boat::SaveXML(wxString filename)
 
             wxString ContoursFileName = polar.FileName;
             ContoursFileName.Replace
-                (wxFileName::GetPathSeparator(), _T("!?!"));
+                (wxFileName::GetPathSeparator(), _T("_"));
+            ContoursFileName.Replace
+                (wxFileName::GetVolumeSeparator(), _T("_"));
             ContoursFileName = ContoursPath + ContoursFileName + _T(".contours");
             wxFile file;
             if(file.Open(ContoursFileName, wxFile::write)) {
                 e->SetAttribute("CrossOverContours", ContoursFileName.mb_str());
                 file.Write(polar.CrossOverRegion.toString());
-            } else
+            } else {
+                delete e;
                 return _("Failed to open for writing: ") + ContoursFileName;
+            }
         }
 
-//        e->SetAttribute("optimize_tacking", polar.optimize_tacking);
         e->SetAttribute("CrossOverPercentage", 100*polar.m_crossoverpercentage);
         
         root->LinkEndChild(e);
@@ -156,15 +167,15 @@ wxString Boat::SaveXML(wxString filename)
     return wxString();
 }
 
-int Boat::TrySwitchPolar(int curpolar, double VW, double H, double Swell)
+int Boat::TrySwitchPolar(int curpolar, double VW, double H, double Swell, bool optimize_tacking)
 {
     // are we still valid?
-    if(curpolar != -1 && Polars[curpolar].InsideCrossOverContour(H, VW))
+    if(curpolar != -1 && Polars[curpolar].InsideCrossOverContour(H, VW, optimize_tacking))
         return curpolar;
 
     // the current polar must change; select the first polar we can use
     for(int i=0; i<(int)Polars.size(); i++)
-        if(i != curpolar && Polars[i].InsideCrossOverContour(H, VW))
+        if(i != curpolar && Polars[i].InsideCrossOverContour(H, VW, optimize_tacking))
             return i;
 
     return -1; // no valid polar

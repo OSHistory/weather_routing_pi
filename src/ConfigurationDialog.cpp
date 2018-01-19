@@ -145,10 +145,10 @@ void ConfigurationDialog::SetConfigurations(std::list<RouteMapConfiguration> con
     bool ult = m_WeatherRouting.m_SettingsDialog.m_cbUseLocalTime->GetValue();
 #define STARTTIME (ult ? it->StartTime.FromUTC() : it->StartTime)
 
-    SET_CONTROL_VALUE(STARTTIME, m_dpStartDate, SetValue, wxDateTime, wxDateTime());
-    SET_CONTROL_VALUE(wxString::Format(_T("%.2f"), STARTTIME.GetHour()
-                                       + (double)STARTTIME.GetMinute()/60.0),
-                m_tStartHour, SetValue, wxString, _T(""));
+    SET_CONTROL_VALUE(STARTTIME.GetDateOnly(), m_dpStartDate, SetValue, wxDateTime, wxDateTime());
+    SET_SPIN_VALUE(StartHour, STARTTIME.GetHour());
+    SET_CONTROL_VALUE(wxString::Format(_T("%.2f"), (double)STARTTIME.GetMinute() + STARTTIME.GetSecond()/60.0),
+                m_tStartMinute, SetValue, wxString, _T(""));
 
     SET_SPIN_VALUE(TimeStepHours, (int)((*it).dt / 3600));
     SET_SPIN_VALUE(TimeStepMinutes, ((int)(*it).dt / 60) % 60);
@@ -185,6 +185,8 @@ void ConfigurationDialog::SetConfigurations(std::list<RouteMapConfiguration> con
     SET_CHECKBOX(DetectLand);
     SET_CHECKBOX(DetectBoundary);
     SET_CHECKBOX(Currents);
+    SET_CHECKBOX(OptimizeTacking);
+    
     SET_CHECKBOX(InvertedRegions);
     SET_CHECKBOX(Anchoring);
 
@@ -226,6 +228,28 @@ void ConfigurationDialog::SetBoatFilename(wxString path)
     Update();
 }
 
+void ConfigurationDialog::OnResetAdvanced( wxCommandEvent& event )
+{
+    m_bBlockUpdate = true;
+    m_sMaxLatitude->SetValue(90);
+    m_sTackingTime->SetValue(0);
+    m_sWindVSCurrent->SetValue(0);
+    m_sMaxCourseAngle->SetValue(180);
+    m_sMaxSearchAngle->SetValue(120);
+    m_cbAvoidCycloneTracks->SetValue(false);
+    m_cbInvertedRegions->SetValue(false);
+    m_cbAnchoring->SetValue(false);
+    m_cIntegrator->SetSelection(0);
+    m_sWindStrength->SetValue(100);
+    m_sTackingTime->SetValue(0);
+    m_sFromDegree->SetValue(0);
+    m_sToDegree->SetValue(180);
+    m_tByDegrees->SetValue(_T("5"));
+    m_bBlockUpdate = false;
+
+    Update();
+}
+
 void ConfigurationDialog::SetStartDateTime(wxDateTime datetime)
 {
     if(datetime.IsValid()) {
@@ -233,8 +257,9 @@ void ConfigurationDialog::SetStartDateTime(wxDateTime datetime)
             datetime = datetime.FromUTC();
 
         m_dpStartDate->SetValue(datetime);
-        m_tStartHour->SetValue(wxString::Format(_T("%.3f"), datetime.GetHour()
-                                                +datetime.GetMinute() / 60.0));
+        m_sStartHour->SetValue(datetime.GetHour());
+        m_tStartMinute->SetValue(wxString::Format(_T("%.3f"), datetime.GetMinute()
+                                                  +datetime.GetSecond() / 60.0));        
     } else {
         wxMessageDialog mdlg(this, _("Invalid Date Time."),
                              wxString(_("Weather Routing"), wxOK | wxICON_WARNING));
@@ -274,15 +299,25 @@ void ConfigurationDialog::Update()
         GET_CHOICE(Start);
         GET_CHOICE(End);
 
+        int hour = configuration.StartTime.GetHour();
+        double minute = configuration.StartTime.GetMinute() + configuration.StartTime.GetSecond()/60.0;
         if(m_dpStartDate->GetValue().IsValid())
             configuration.StartTime = m_dpStartDate->GetValue();
 
-        if(!m_tStartHour->GetValue().empty()) {
-            double hour;
-            m_tStartHour->GetValue().ToDouble(&hour);
-            configuration.StartTime.SetHour((int)hour);
-            configuration.StartTime.SetMinute((int)(60*hour)%60);
+        if(m_sStartHour->IsEnabled())
+            hour = m_sStartHour->GetValue();
+        configuration.StartTime.SetHour(hour);
+
+        if(m_tStartMinute->IsEnabled() &&
+           m_tStartMinute->GetValue().ToDouble(&minute)) {
+            if(minute < 0)
+                minute = 0;
+            else if(minute >= 60)
+                minute = 59.9;
         }
+
+        configuration.StartTime.SetMinute((int)minute);
+        configuration.StartTime.SetSecond((int)(60*minute)%60);
 
         if(m_WeatherRouting.m_SettingsDialog.m_cbUseLocalTime->GetValue())
             configuration.StartTime = configuration.StartTime.ToUTC();
@@ -319,6 +354,8 @@ void ConfigurationDialog::Update()
         GET_CHECKBOX(DetectLand);
         GET_CHECKBOX(DetectBoundary);
         GET_CHECKBOX(Currents);
+        GET_CHECKBOX(OptimizeTacking);
+        
         GET_CHECKBOX(InvertedRegions);
         GET_CHECKBOX(Anchoring);
 

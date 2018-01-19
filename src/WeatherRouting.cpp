@@ -27,6 +27,7 @@
 #include <wx/wx.h>
 #include <wx/imaglist.h>
 #include <wx/progdlg.h>
+#include <wx/dir.h>
 
 // TODO: remove Ugly hack!
 #include <wx/uiaction.h>
@@ -93,15 +94,15 @@ static const char *eye[]={
 WeatherRoute::WeatherRoute() : routemapoverlay(new RouteMapOverlay) {}
 WeatherRoute::~WeatherRoute() { delete routemapoverlay; }
 
- const wxString WeatherRouting::column_names[NUM_COLS] = {_T(""), _("Start"), _("Start Time"),
-                                                          _("End"), _("End Time"), _("Time"), _("Distance"),
-                                                          _("Avg Speed"), _("Max Speed"),
-                                                          _("Avg Speed Ground"), _("Max Speed Ground"),
-                                                          _("Avg Wind"), _("Max Wind"),
-                                                          _("Avg Current"), _("Max Current"),
-                                                          _("Avg Swell"), _("Max Swell"),
-                                                          _("Upwind Percentage"),
-                                                          _("Port Starboard"), _("Tacks"), _("State")};
+const wxString WeatherRouting::column_names[NUM_COLS] = {"", "Boat", "Start", "Start Time",
+                                                         "End", "End Time", "Time", "Distance",
+                                                         "Avg Speed", "Max Speed",
+                                                         "Avg Speed Ground", "Max Speed Ground",
+                                                         "Avg Wind", "Max Wind", "Max Wind Gust",
+                                                         "Avg Current", "Max Current",
+                                                         "Avg Swell", "Max Swell",
+                                                         "Upwind Percentage",
+                                                         "Port Starboard", "Tacks", "State"};
 
 static int sortcol, sortorder = 1;
 // sort callback. Sort by body.
@@ -171,15 +172,36 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
 	m_default_configuration_path = weather_routing_pi::StandardPath()
         + _T("WeatherRoutingConfiguration.xml");
 
-    if(!OpenXML(m_default_configuration_path, false)) {
+    if(!wxFileName::FileExists(m_default_configuration_path)) {
         /* create directory for plugin files if it doesn't already exist */
-        wxFileName fn(m_default_configuration_path);
-        wxFileName fn2 = fn.GetPath();
-        if(!fn.DirExists()) {
-            fn2.Mkdir();
-            fn.Mkdir();
+	wxFileName fn;
+	wxString boatsdir = weather_routing_pi::StandardPath() + wxFileName::GetPathSeparator() + _T("boats");
+	wxString polarsdir = weather_routing_pi::StandardPath() + wxFileName::GetPathSeparator() + _T("polars");
+
+	fn.Mkdir(weather_routing_pi::StandardPath());
+	fn.Mkdir(boatsdir);
+	fn.Mkdir(polarsdir);
+
+	wxString cfg = *GetpSharedDataLocation() + _T("plugins/weather_routing_pi/data/") + _T("WeatherRoutingConfiguration.xml");
+	if (wxFileName::FileExists(cfg))
+	    wxCopyFile(cfg, m_default_configuration_path);
+
+	wxArrayString boats;
+	wxDir::GetAllFiles(*GetpSharedDataLocation() + _T("plugins/weather_routing_pi/data/boats"), &boats);
+	for (unsigned int i = 0; i < boats.Count(); i++) {
+	    wxFileName f(boats.Item(i));
+	    wxCopyFile(boats.Item(i), boatsdir + wxFileName::GetPathSeparator() + f.GetFullName());
+        }
+
+	wxArrayString polars;
+	wxDir::GetAllFiles(*GetpSharedDataLocation() + _T("plugins/weather_routing_pi/data/polars"), &polars);
+	for (unsigned int i = 0; i < polars.Count(); i++) {
+	    wxFileName f(polars.Item(i));
+	    wxCopyFile(polars.Item(i), polarsdir + wxFileName::GetPathSeparator() + f.GetFullName());
         }
     }
+
+    OpenXML(m_default_configuration_path, false);
 
     wxFileConfig *pConf = GetOCPNConfigObject();
     pConf->SetPath ( _T( "/PlugIns/WeatherRouting" ) );
@@ -399,7 +421,7 @@ void WeatherRouting::UpdateColumns()
     for(int i=0; i<NUM_COLS; i++) {
         if(m_SettingsDialog.m_cblFields->IsChecked(i)) {
             columns[i] = m_lWeatherRoutes->GetColumnCount();
-            wxString name = column_names[i];
+            wxString name = _(column_names[i]);
 
             if(i == STARTTIME || i == ENDTIME) {
                 name += _T(" (");
@@ -1397,9 +1419,9 @@ bool WeatherRouting::OpenXML(wxString filename, bool reportfailure)
                     RouteMapConfiguration configuration;
                     configuration.Start = wxString::FromUTF8(e->Attribute("Start"));
                     wxDateTime date;
-                    date.ParseDate(wxString::FromUTF8(e->Attribute("StartDate")));
+                    date.ParseISODate(wxString::FromUTF8(e->Attribute("StartDate")));
                     wxDateTime time;
-                    time.ParseTime(wxString::FromUTF8(e->Attribute("StartTime")));
+                    time.ParseISOTime(wxString::FromUTF8(e->Attribute("StartTime")));
                     if(date.IsValid()) {
                         if(time.IsValid()) {
                             date.SetHour(time.GetHour());
@@ -1414,8 +1436,16 @@ bool WeatherRouting::OpenXML(wxString filename, bool reportfailure)
                     configuration.dt = AttributeDouble(e, "dt", 0);
 
                     configuration.boatFileName = wxString::FromUTF8(e->Attribute("Boat"));
-                    if(!wxFileName::FileExists(configuration.boatFileName))
-                        configuration.boatFileName = _T("");
+                    if(!wxFileName::FileExists(configuration.boatFileName)) {
+                        configuration.boatFileName = weather_routing_pi::StandardPath() +
+			                             _T("boats") +
+						     wxFileName::GetPathSeparator() +
+						     configuration.boatFileName;
+                        if(!wxFileName::FileExists(configuration.boatFileName)) {
+
+                            configuration.boatFileName = _T("");
+			}
+		    }
 
                     configuration.Integrator = (RouteMapConfiguration::IntegratorType)
                         AttributeInt(e, "Integrator", 0);
@@ -1444,6 +1474,8 @@ bool WeatherRouting::OpenXML(wxString filename, bool reportfailure)
                     configuration.DetectLand = AttributeBool(e, "DetectLand", true);
                     configuration.DetectBoundary = AttributeBool(e, "DetectBoundary", false);
                     configuration.Currents = AttributeBool(e, "Currents", true);
+                    configuration.OptimizeTacking = AttributeBool(e, "OptimizeTacking", false);
+
                     configuration.InvertedRegions = AttributeBool(e, "InvertedRegions", false);
                     configuration.Anchoring = AttributeBool(e, "Anchoring", false);
 
@@ -1512,8 +1544,8 @@ void WeatherRouting::SaveXML(wxString filename)
             (*it)->routemapoverlay->GetConfiguration();
 
         c->SetAttribute("Start", configuration.Start.mb_str());
-        c->SetAttribute("StartDate", configuration.StartTime.FormatDate().mb_str());
-        c->SetAttribute("StartTime", configuration.StartTime.FormatTime().mb_str());
+        c->SetAttribute("StartDate", configuration.StartTime.FormatISODate().mb_str());
+        c->SetAttribute("StartTime", configuration.StartTime.FormatISOTime().mb_str());
         c->SetAttribute("End", configuration.End.mb_str());
         c->SetAttribute("dt", configuration.dt);
 
@@ -1544,6 +1576,8 @@ void WeatherRouting::SaveXML(wxString filename)
         c->SetAttribute("DetectLand", configuration.DetectLand);
         c->SetAttribute("DetectBoundary", configuration.DetectBoundary);
         c->SetAttribute("Currents", configuration.Currents);
+        c->SetAttribute("OptimizeTacking", configuration.OptimizeTacking);
+
         c->SetAttribute("InvertedRegions", configuration.InvertedRegions);
         c->SetAttribute("Anchoring", configuration.Anchoring);
 
@@ -1708,6 +1742,9 @@ void WeatherRoute::Update(WeatherRouting *wr, bool stateonly)
         MaxWind = wxString::Format
             (_T("%.2f"), routemapoverlay->RouteInfo(RouteMapOverlay::MAXWIND));
 
+        MaxWindGust = wxString::Format
+            (_T("%.2f"), routemapoverlay->RouteInfo(RouteMapOverlay::MAXWINDGUST));
+
         AvgCurrent = wxString::Format
             (_T("%.2f"), routemapoverlay->RouteInfo(RouteMapOverlay::AVGCURRENT));
 
@@ -1777,6 +1814,11 @@ void WeatherRouting::UpdateItem(long index, bool stateonly)
             m_lWeatherRoutes->SetColumnWidth(columns[VISIBLE], 28);
         }
 
+        if(columns[BOAT] >= 0) {
+            m_lWeatherRoutes->SetItem(index, columns[BOAT], wxFileName(weatherroute->BoatFilename).GetName());
+            m_lWeatherRoutes->SetColumnWidth(columns[BOAT], wxLIST_AUTOSIZE);
+        }
+
         if(columns[START] >= 0) {
             m_lWeatherRoutes->SetItem(index, columns[START], weatherroute->Start);
             m_lWeatherRoutes->SetColumnWidth(columns[START], wxLIST_AUTOSIZE);
@@ -1822,6 +1864,9 @@ void WeatherRouting::UpdateItem(long index, bool stateonly)
 
         if(columns[MAXWIND] >= 0)
             m_lWeatherRoutes->SetItem(index, columns[MAXWIND], weatherroute->MaxWind);
+
+        if(columns[MAXWINDGUST] >= 0)
+            m_lWeatherRoutes->SetItem(index, columns[MAXWINDGUST], weatherroute->MaxWindGust);
 
         if(columns[AVGCURRENT] >= 0)
             m_lWeatherRoutes->SetItem(index, columns[AVGCURRENT], weatherroute->AvgCurrent);
@@ -2046,6 +2091,14 @@ void WeatherRouting::Start(RouteMapOverlay *routemapoverlay)
         return;
     }
 
+    if(fabs(configuration.StartLat) > configuration.MaxLatitude ||
+       fabs(configuration.EndLat) > configuration.MaxLatitude) {
+        wxMessageDialog mdlg(this, _("Start/End lies outside of Max Latitude constraint:\n\
+routing will fail"),
+                             _("Weather Routing"), wxOK | wxICON_WARNING);
+        mdlg.ShowModal();
+    }
+
     /* initialize crossing land routine from main thread as it is
        not re-entrant, and cannot be done by worker-threads later */
     if(configuration.DetectLand)
@@ -2221,7 +2274,8 @@ RouteMapConfiguration WeatherRouting::DefaultConfiguration()
     } else
         configuration.EndLat = 0, configuration.EndLon = 0;
 
-    configuration.boatFileName = weather_routing_pi::StandardPath() + _T("Boat.xml");
+    configuration.boatFileName = weather_routing_pi::StandardPath() +
+        _T("boats") + wxFileName::GetPathSeparator() + _T("Boat.xml");
 
     configuration.Integrator = RouteMapConfiguration::NEWTON;
 

@@ -104,6 +104,22 @@ static double Swell(GribRecordSet *grib, double lat, double lon)
     return height;
 }
 
+static double Gust(GribRecordSet *grib, double lat, double lon)
+{
+    if(!grib)
+        return NAN;
+
+    GribRecord *grh = grib->m_GribRecordPtrArray[Idx_WIND_GUST];
+    if(!grh)
+        return NAN;
+
+    double gust = grh->getInterpolatedValue(lon, lat, true );
+    if(gust == GRIB_NOTDEF)
+        return NAN;
+    return gust;
+}
+
+
 static inline bool GribWind(GribRecordSet *grib, double lat, double lon,
                             double &WG, double &VWG)
 {
@@ -483,15 +499,21 @@ static inline bool ReadWindAndCurrents(RouteMapConfiguration &configuration, Pos
 }
 
 /* get data from a position for plotting */
-void Position::GetPlotData(Position *next, double dt, RouteMapConfiguration &configuration, PlotData &data)
+bool Position::GetPlotData(Position *next, double dt, RouteMapConfiguration &configuration, PlotData &data)
 {
     data.WVHT = Swell(configuration.grib, lat, lon);
+    data.VW_GUST = Gust(configuration.grib, lat, lon);
     data.tacks = tacks;
 
     climatology_wind_atlas atlas;
     int data_mask = 0; // not used for plotting yet
-    ReadWindAndCurrents(configuration, this, data.WG, data.VWG,
-                        data.W, data.VW, data.C, data.VC, atlas, data_mask);
+    if(!ReadWindAndCurrents(configuration, this, data.WG, data.VWG,
+                            data.W, data.VW, data.C, data.VC, atlas, data_mask)) {
+        // I don't think this can ever be hit, because the data should have been there
+        // for the position be be created in the first place
+        printf("Wind/Current data failed for position!!!\n");
+        return false;
+    }
 
     ll_gc_ll_reverse(lat, lon, next->lat, next->lon, &data.BG, &data.VBG);
     if(dt == 0)
@@ -500,6 +522,7 @@ void Position::GetPlotData(Position *next, double dt, RouteMapConfiguration &con
         data.VBG *= 3600 / dt;
 
     OverWater(data.BG, data.VBG, data.C, data.VC, data.B, data.VB);
+    return true;
 }
 
 bool Position::GetWindData(RouteMapConfiguration &configuration, double &W, double &VW, int &data_mask)
@@ -536,10 +559,10 @@ static inline bool ComputeBoatSpeed
             double VBc, mind = polar.MinDegreeStep();
             // if tacking
             if(fabs(dir) < mind)
-                VBc = polar.Speed(mind, atlas.VW[i])
+                VBc = polar.Speed(mind, atlas.VW[i], true, configuration.OptimizeTacking)
                     * cos(deg2rad(mind)) / cos(deg2rad(dir));
             else
-                VBc = polar.Speed(dir, atlas.VW[i]);
+                VBc = polar.Speed(dir, atlas.VW[i], true, configuration.OptimizeTacking);
 
             VB += atlas.directions[i]*VBc;
         }
@@ -547,7 +570,7 @@ static inline bool ComputeBoatSpeed
         if(configuration.ClimatologyType == RouteMapConfiguration::CUMULATIVE_MINUS_CALMS)
             VB *= 1-atlas.calm;
     } else
-        VB = polar.Speed(H, VW);
+        VB = polar.Speed(H, VW, true, configuration.OptimizeTacking);
 
     /* failed to determine speed.. */
     if(isnan(B) || isnan(VB)) {
@@ -686,7 +709,7 @@ bool Position::Propagate(IsoRouteList &routelist, RouteMapConfiguration &configu
         }
 
         {
-        int newpolar = configuration.boat.TrySwitchPolar(polar, VW, H, S);
+        int newpolar = configuration.boat.TrySwitchPolar(polar, VW, H, S, configuration.OptimizeTacking);
         if(newpolar == -1) {
             configuration.polar_failed = true;
             continue;
@@ -856,7 +879,7 @@ double Position::PropagateToEnd(RouteMapConfiguration &configuration, double &H,
 
         double dummy_dist; // not used
 
-        int newpolar = configuration.boat.TrySwitchPolar(polar, VW, H, S);
+        int newpolar = configuration.boat.TrySwitchPolar(polar, VW, H, S, configuration.OptimizeTacking);
         if(newpolar == -1) {
             configuration.polar_failed = true;
             return NAN;
@@ -870,12 +893,19 @@ double Position::PropagateToEnd(RouteMapConfiguration &configuration, double &H,
             return NAN;
     } while((bearing - BG) > 1e-3);
 
+    /* only allow if we fit in the isochron time.  We could optimize this by finding
+       the maximum boat speed once, and using that before computing boat speed for
+       this angle, but for now, we don't worry because propagating to the end is a
+       small amount of total computation */
+    if(dist / VBG > configuration.dt / 3600.0)
+        return NAN;
+    
     /* quick test first to avoid slower calculation */
     if(VB + VW > configuration.MaxApparentWindKnots &&
        Polar::VelocityApparentWind(VB, H, VW) > configuration.MaxApparentWindKnots)
         return NAN;
 
-#if 0
+#if 1
     /* landfall test if we are within 60 miles (otherwise it's very slow) */
     if(configuration.DetectLand && dist < 60
        && CrossesLand(configuration.EndLat, configuration.EndLon))
@@ -924,6 +954,7 @@ bool Position::EntersBoundary(double dlat, double dlon)
     struct FindClosestBoundaryLineCrossing_t t;
     t.dStartLat = lat, t.dStartLon = heading_resolve(lon);
     t.dEndLat = dlat, t.dEndLon = heading_resolve(dlon);
+    t.sBoundaryState = wxT("Active");
     return RouteMap::ODFindClosestBoundaryLineCrossing(&t);
 }
 
@@ -2549,6 +2580,7 @@ void RouteMap::SetNewGrib(GribRecordSet *grib)
         m_NewGrib->m_GribRecordPtrArray[i] = NULL;
         switch (i) {
         case Idx_HTSIGW:
+        case Idx_WIND_GUST:
         case Idx_WIND_VX:
         case Idx_WIND_VY:
         case Idx_SEACURRENT_VX:

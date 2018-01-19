@@ -69,6 +69,7 @@ void ReportDialog::SetRouteMapOverlays(std::list<RouteMapOverlay*> routemapoverl
         RouteMapConfiguration c = (*it)->GetConfiguration();
         std::list<PlotData> p = (*it)->GetPlotData();
 
+        page += _("Boat Filename") + _T(" ") + wxFileName(c.boatFileName).GetName() + _T("<dt>");
         page += _("Route from ") + c.Start + _(" to ") + c.End + _T("<dt>");
         page += _("Leaving ") + c.StartTime.Format(_T("%x %X")) + _T("<dt>");
         page += _("Arriving ") + (*it)->EndTime().Format(_T("%x %X")) + _T("<dt>");
@@ -84,13 +85,15 @@ void ReportDialog::SetRouteMapOverlays(std::list<RouteMapOverlay*> routemapoverl
         double avgspeed = (*it)->RouteInfo(RouteMapOverlay::AVGSPEED);
         double avgspeedground = (*it)->RouteInfo(RouteMapOverlay::AVGSPEEDGROUND);
         page += _("Average Speed Over Water (SOW)") + wxString(_T(": ")) + wxString::Format
-            (_T(" %.2f"), avgspeed) + _T(" knots<dt>");
+            (_T(" %.2f"), avgspeed) + _T(" ") + _("knots") + _T("<dt>");
         page += _("Average Speed Over Ground (SOG)") + wxString(_T(": ")) + wxString::Format
-            (_T(" %.2f"), avgspeedground) + _T(" knots<dt>");
+            (_T(" %.2f"), avgspeedground) + _T(" ") + _("knots") + _T("<dt>");
         page += _("Average Wind") + wxString(_T(": ")) + wxString::Format
-            (_T(" %.2f"), (*it)->RouteInfo(RouteMapOverlay::AVGWIND)) + _T(" knots<dt>");
+            (_T(" %.2f"), (*it)->RouteInfo(RouteMapOverlay::AVGWIND)) + _T(" ")
+	    + _("knots") + _T("<dt>");
         page += _("Average Swell") + wxString(_T(": ")) + wxString::Format
-            (_T(" %.2f"), (*it)->RouteInfo(RouteMapOverlay::AVGSWELL)) + _T(" meters<dt>");
+            (_T(" %.2f"), (*it)->RouteInfo(RouteMapOverlay::AVGSWELL)) + _T(" ")
+	    + _("meters") + _T("<dt>");
         page += _("Upwind") + wxString(_T(": ")) + wxString::Format
             (_T(" %.2f%%"), (*it)->RouteInfo(RouteMapOverlay::PERCENTAGE_UPWIND)) + _T("<dt>");
         double port_starboard = (*it)->RouteInfo(RouteMapOverlay::PORT_STARBOARD);
@@ -171,7 +174,8 @@ void ReportDialog::GenerateRoutesReport()
             (_T("(%ld ") + wxString(_("configurations")) + _T(")\n"), overlays.size());
         page += _("<dt>Fastest configuration ") + fastest->StartTime().Format(_T("%x"));
         page += wxString(_T(" ")) + _("avg speed") + wxString::Format
-            (_T(": %.2f knots"), fastest->RouteInfo(RouteMapOverlay::AVGSPEED));
+            (_T(": %.2f "), fastest->RouteInfo(RouteMapOverlay::AVGSPEED))
+	    + _("knots");
 
         /* determine best times if upwind percentage is below 50 */
         page += _T("<dt>");

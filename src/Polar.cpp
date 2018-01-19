@@ -176,11 +176,12 @@ double Polar::VelocityTrueWind2(double VA, double VB, double A)
 
 Polar::Polar()
 {
+    m_crossoverpercentage = 0;
 }
 
 #define MAX_WINDSPEEDS_IN_TABLE 200
 #define MESSAGE(S) (S + wxString(_T("\n")) + wxString::FromUTF8(filename) \
-                    + (line > 0 ? (_(" line ") + wxString::Format(_T("%d"), linenum)) : _T("")))
+                    + (linenum > 0 ? (_(" line ") + wxString::Format(_T("%d"), linenum)) : _T("")))
 #define PARSE_WARNING(S) do { if(message.empty()) message = MESSAGE(S); } while (0)
 #define PARSE_ERROR(S) do { message = _("Boat polar failed") + wxString(_T("\n")) \
                                   + MESSAGE(S); goto failed; } while (0)
@@ -370,6 +371,7 @@ bool Polar::Save(const wxString &filename)
 
    TODO: Make this this work for asymmetrical polars correctly
 */
+#if 0
 void Polar::OptimizeTackingSpeed()
 {
     for(unsigned int VWi = 0; VWi < wind_speeds.size(); VWi++) {
@@ -421,7 +423,7 @@ void Polar::OptimizeTackingSpeed()
         }
     }
 }
-
+#endif
 
 // return index of wind speed in table which less than our wind speed
 void Polar::ClosestVWi(double VW, int &VW1i, int &VW2i)
@@ -437,9 +439,37 @@ void Polar::ClosestVWi(double VW, int &VW1i, int &VW2i)
     VW1i = VW2i > 0 ? VW2i - 1 : 0;
 }
 
+
+bool Polar::VMGAngle(SailingWindSpeed &ws1, SailingWindSpeed &ws2, float VW, float &W)
+{
+    // optimization
+    SailingVMG vmg1 = ws1.VMG, vmg2 = ws2.VMG;
+    if(W >= vmg1.values[SailingVMG::STARBOARD_UPWIND] &&
+       W >= vmg2.values[SailingVMG::STARBOARD_UPWIND] &&
+       W <= vmg1.values[SailingVMG::STARBOARD_DOWNWIND] &&
+       W <= vmg2.values[SailingVMG::STARBOARD_DOWNWIND])
+        return false;
+    if(W >= vmg1.values[SailingVMG::PORT_DOWNWIND] &&
+       W >= vmg2.values[SailingVMG::PORT_DOWNWIND] &&
+       W <= vmg1.values[SailingVMG::PORT_UPWIND] &&
+       W <= vmg2.values[SailingVMG::PORT_UPWIND])
+        return false;
+
+    SailingVMG vmg = GetVMGTrueWind(VW);
+    if(W < vmg.values[SailingVMG::STARBOARD_UPWIND] ||
+       W > vmg.values[SailingVMG::PORT_UPWIND])
+        W = vmg.values[SailingVMG::STARBOARD_UPWIND];
+    else if(W > vmg.values[SailingVMG::STARBOARD_DOWNWIND] &&
+            W < vmg.values[SailingVMG::STARBOARD_DOWNWIND])
+        W = vmg.values[SailingVMG::STARBOARD_DOWNWIND];
+    else
+        return false;
+    return true;
+}
+
 /* compute boat speed from true wind angle and true wind speed
  */
-double Polar::Speed(double W, double VW, bool bound)
+double Polar::Speed(double W, double VW, bool bound, bool optimize_tacking)
 {
     if(VW < 0)
         return NAN;
@@ -452,8 +482,8 @@ double Polar::Speed(double W, double VW, bool bound)
     // assume symmetric
     if(W > 180)
         W = 360 - W;
-
-    if(W < degree_steps[0] || W > degree_steps[degree_steps.size()-1])
+    
+    if(!optimize_tacking && (W < degree_steps[0] || W > degree_steps[degree_steps.size()-1]))
         return NAN;
 
     if(bound)
@@ -467,12 +497,14 @@ double Polar::Speed(double W, double VW, bool bound)
 
     int VW1i, VW2i;
     ClosestVWi(VW, VW1i, VW2i);
-    if(VW1i == (int)wind_speeds.size() - 1)
-        VW2i = VW1i;
-    else
-        VW2i = VW1i + 1;
-
     SailingWindSpeed &ws1 = wind_speeds[VW1i], &ws2 = wind_speeds[VW2i];
+
+    if(optimize_tacking) {
+        float vmgW = W;
+        if(VMGAngle(ws1, ws2, VW, vmgW))
+            return Speed(vmgW, VW, bound)*cos(deg2rad(vmgW))/cos(deg2rad(W));
+    }
+
     double VW1 = ws1.VW, VW2 = ws2.VW;
 
     double VB11 = ws1.speeds[W1i], VB12 = ws1.speeds[W2i];
@@ -574,8 +606,12 @@ SailingVMG Polar::GetVMGTrueWind(double VW)
     double VW1 = ws1.VW, VW2 = ws2.VW;
     SailingVMG vmg, vmg1 = ws1.VMG, vmg2 = ws2.VMG;
 
-    for(int i=0; i<4; i++)
-        vmg.values[i] = interp_value(VW, VW1, VW2, vmg1.values[i], vmg2.values[i]);
+    for(int i=0; i<4; i++) {
+        if(VW < VW1 || VW > VW2)
+            vmg.values[i] = NAN;
+        else
+            vmg.values[i] = interp_value(VW, VW1, VW2, vmg1.values[i], vmg2.values[i]);
+    }
 
     return vmg;
 }
@@ -667,8 +703,14 @@ void Polar::UpdateDegreeStepLookup()
 }
 
 // Determine if our current state is satisfied by the current cross over contour
-bool Polar::InsideCrossOverContour(float H, float VW)
+bool Polar::InsideCrossOverContour(float H, float VW, bool optimize_tacking)
 {
+    if(optimize_tacking) {
+        int VW1i, VW2i;
+        ClosestVWi(VW, VW1i, VW2i);
+        SailingWindSpeed &ws1 = wind_speeds[VW1i], &ws2 = wind_speeds[VW2i];
+        VMGAngle(ws1, ws2, VW, H);
+    }
     return CrossOverRegion.Contains(fabs(H), VW);
 }
 
@@ -833,8 +875,7 @@ void Polar::Generate(const std::list<PolarMeasurement> &measurements)
         double W = degree_steps[Wi];
         for(unsigned int VWi = 0; VWi<wind_speeds.size(); VWi++) {
             double VW = wind_speeds[VWi].VW;
-            wind_speeds[VWi].speeds[Wi] = BoatSpeedFromMeasurements(measurements,
-                                                                    W, VW);
+            wind_speeds[VWi].speeds[Wi] = BoatSpeedFromMeasurements(measurements, W, VW);
         }
     }
 }
@@ -843,7 +884,7 @@ void Polar::CalculateVMG(int VWi)
 {
     SailingWindSpeed &ws = wind_speeds[VWi];
     // limits for port/starboard upwind/downwind
-    const double limits[4][2] = {{270, 360}, {0, 90}, {180, 270}, {90, 180}};
+    const double limits[4][2] = {{0, 90}, {270, 360}, {90, 180}, {180, 270}};
     for(int i=0; i<4; i++) {
         double upwind = i < 2 ? 1 : -1;
         double maxVB = 0;
@@ -865,18 +906,18 @@ void Polar::CalculateVMG(int VWi)
 
         // interpolate the best vmg (as it often lies between entries in the polar
         if(!isnan(maxW)) {
-            unsigned int Wi1 = maxWi > 0 ? maxWi - 1 : degree_steps.size() - 1;
-            unsigned int Wi2 = maxWi < degree_steps.size() - 1 ? maxWi + 1 : 0;
+            unsigned int Wi1 = maxWi > 0 ? maxWi - 1 : maxWi;
+            unsigned int Wi2 = maxWi < degree_steps.size() - 1 ? maxWi + 1 : maxWi;
             double dsmaxWi = degree_steps[maxWi];
             double step = wxMax(fabsf(dsmaxWi - degree_steps[Wi1]),
                                 fabsf(dsmaxWi - degree_steps[Wi2])) / 4;
 
             while(step > 2e-3) {
                 double W1 = wxMax(maxW-step, limits[i][0]), W2 = wxMin(maxW+step, limits[i][1]);
-                double VB1 = upwind*cos(deg2rad(W1))*Speed(W1, ws.VW);
-                double VB2 = upwind*cos(deg2rad(W2))*Speed(W2, ws.VW);
+                double VB1 = upwind*cos(deg2rad(W1))*Speed(W1, ws.VW, true);
+                double VB2 = upwind*cos(deg2rad(W2))*Speed(W2, ws.VW, true);
 
-                if(VB1 > VB2)
+                if(isnan(VB2) || VB1 > VB2)
                     maxW = (W1 + maxW) / 2;
                 else
                     maxW = (W2 + maxW) / 2;
@@ -890,8 +931,8 @@ void Polar::CalculateVMG(int VWi)
 
     // for symmetric polars
     if(degree_steps[degree_steps.size()-1] <= 180) {
-        ws.VMG.values[0] = ws.VMG.values[1];
-        ws.VMG.values[2] = ws.VMG.values[3];
+        ws.VMG.values[SailingVMG::PORT_UPWIND] = 360 - ws.VMG.values[SailingVMG::STARBOARD_UPWIND];
+        ws.VMG.values[SailingVMG::PORT_DOWNWIND] = 360 - ws.VMG.values[SailingVMG::STARBOARD_DOWNWIND];
     }
 }
 
