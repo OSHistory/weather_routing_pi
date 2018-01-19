@@ -137,8 +137,7 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
       m_bShowConfiguration(false), m_bShowConfigurationBatch(false),
       m_bShowSettings(false), m_bShowStatistics(false),
       m_bShowReport(false), m_bShowPlot(false),
-	  m_bShowFilter(false), m_weather_routing_pi(plugin)
-      //m_bShowFilter(false), m_timer(this), m_weather_routing_pi(plugin)
+	    m_bShowFilter(false), m_weather_routing_pi(plugin)
 {
     wxIcon icon;
     icon.CopyFromBitmap(*_img_WeatherRouting);
@@ -150,9 +149,6 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
     m_ReportDialog.SetIcon(icon);
     m_PlotDialog.SetIcon(icon);
     m_FilterRoutesDialog.SetIcon(icon);
-
-    // CHANGE: initialize timer
-    //m_timer = (wxTimer *)NULL;
 
     m_SettingsDialog.LoadSettings();
 
@@ -166,15 +162,11 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
 
     UpdateColumns();
 
-    // CHANGE: initialize list of conf paths
-    //confPaths.push_back("/home/magellan/gis/projects/antiker_seehandel/opencpn_configs/frejus_ostia.xml");
-	//confPaths.push_back("/home/magellan/gis/projects/antiker_seehandel/opencpn_configs/ostia_carthago.xml");
-
 	m_confFilesInfoPath = weather_routing_pi::StandardPath()
 		+ _T("ConfigFilePaths.txt");
-	//BuildConfFilesList();
+  // CHANGE: variable to keep track if a configuration file based batch
+  // process is running
 	batchRunning = false;
-	//std::cout << "Plugin was updated" << std::cout;
 
 	m_default_configuration_path = weather_routing_pi::StandardPath()
         + _T("WeatherRoutingConfiguration.xml");
@@ -253,9 +245,7 @@ void WeatherRouting::BuildConfFilesList()
 		std::cout << line << std::endl;
 		//line.erase(line.find_last_not_of(" \n\r\t")+1)
 		fn = wxFileName(line);
-		//fn(filepath);
 		if (fn.FileExists()) {
-		//if (!line.empty()) {
 			confPaths.push_back(line);
 		}
 	}
@@ -263,16 +253,12 @@ void WeatherRouting::BuildConfFilesList()
 
 void WeatherRouting::ExportRouteInfoAsCsv(wxString csv_path)
 {
-	//std::cout << "Exporting to " << csv_path << std::endl;
 	ofstream csv_file;
 	csv_file.open (csv_path);
 
 	for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
-		      //std::cout << i << std::endl;
-
 		      WeatherRoute *weatherroute =
 		          reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-		      //std::cout << weatherroute->GetItem(2) << std::endl;
 		      csv_file << weatherroute->Start << ";";
 		      csv_file << weatherroute->StartTime << ";";
 		      csv_file << weatherroute->End << ";";
@@ -635,106 +621,36 @@ void WeatherRouting::OnPositionKeyDown( wxListEvent& event )
     }
 }
 
-// TODO: rename because it is a auto running process from
-// 1) loading config
-// 2) route computation
-// 3) deleting non-finished
-// 4) Exporting all to routes,
-// 5) and exporting to gpx (via modified ocpn_plugin.h)
-// TODO: extend plugin api with an delete all option
-
-
+// CHANGE: This function takes care of the following
+// 1) Cleaning up old routes and positions
+// 2) loading config xml
+// 3) route computation
+// Deleting and exporting is done in
 void WeatherRouting::ProcessNextConfigFile()
 {
-	//std::cout << "Processing next config file..." << std::endl;
+
 	string currPath = confPaths.at(configCnt);
 
 	std::cout << "Processing file: " << std::endl;
 	std::cout << currPath << std::endl;
 	std::cout << "Removing old tracks..." << std::endl;
+
   m_RoutesToRun = 0;
-    deleteAllTracks();
-    // STEP1: Opening configuration file from disk
-    //std::cout << "Reloading from configuration file..." << std::endl;
-    //OnDeleteAllPositions( configEvent);
-    // Reproduces OnDeleteAllPositions
-    /*
-    RouteMap::Positions.clear();
-    //m_ConfigurationDialog.ClearSources();
-    //m_ConfigurationBatchDialog.ClearSources();
-    m_lPositions->DeleteAllItems();*/
-    //OnDeleteAllPositions(NULL);
+  // STEP1: Cleaning up old routes and positions
+  deleteAllTracks();
+  OnDeleteAllPositions(m_fakeEvent);
+  OnDeleteAll(m_fakeEvent);
 
-    //OnDeleteAll( configEvent);
-    // Reproduce OnDeleteAll() /missing event
-    //wxCommandEvent m_fakeEvent;
-    OnDeleteAllPositions(m_fakeEvent);
-    OnDeleteAll(m_fakeEvent);
-    /*
-    std::list<RouteMapOverlay *>allroutemapoverlays;
-    for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
-        WeatherRoute *weatherroute =
-            reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-        allroutemapoverlays.push_back(weatherroute->routemapoverlay);
-    }
-    DeleteRouteMaps(allroutemapoverlays);
-	*/
-    // GetParent()->Refresh();
+  // Step 2: Load xml confguration file
+  OpenXML(currPath, true);
+  UpdateConfigurations();
+  UpdateColumns();
+  GetParent()->Refresh();
 
-    OpenXML(currPath, true);
-    	//OpenXML(m_default_configuration_path, true);
-    UpdateConfigurations();
-    UpdateColumns();
-
-    GetParent()->Refresh();
-
-	std::cout << "Sleeping for 2 seconds..." << std::endl;
-	usleep(2 * 1000 * 1000);
-
-    	// STEP2: Compute all routes
-	/*if (m_bRunning) {
-		std::cout << "Process is running (stopping now)" << std::endl;
-		Stop();
-	}*/
-    std::cout << "Starting route computation..." << std::endl;
-    //std::cout << m_WaitingRouteMaps.size() << std::endl;
-    m_bRunning = false;
-    //Stop();
-    /*
-    if (m_bRunning) {
-        		std::cout << "Process is running (1)" << std::endl;
-    }*/
-    // Maybe should not be called twice
-	OnComputeAll(m_fakeEvent);
-    /*
-	if (m_firstRound) {
-
-    	m_firstRound = false;
-    } else {
-    	StartAll();
-    	UpdateComputeState();
-    }
-    	if (m_bRunning) {
-        		std::cout << "Process is running (2)" << std::endl;
-    }*/
-    //OnComputeAll(m_fakeEvent);
-    //OnComputeAll(m_fakeEvent);
-
-    // Reproduces OnComputeAll()
-    /*
-    StartAll();
-    std::cout << "WaitingRouteMaps size after startall" << std::endl;
-    std::cout << m_WaitingRouteMaps.size() << std::endl;
-    if (m_bRunning) {
-    		std::cout << "Process is running" << std::endl;
-    }
-    UpdateComputeState();
-    std::cout << "WaitingRouteMaps size after updateComputeState" << std::endl;
-    if (m_bRunning) {
-    		std::cout << "Process is running" << std::endl;
-    }
-    std::cout << m_WaitingRouteMaps.size() << std::endl;
-	*/
+  // STEP 3: Compute all routes
+	std::cout << "Starting route computation..." << std::endl;
+  m_bRunning = false;
+  OnComputeAll(m_fakeEvent);
 }
 
 void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
@@ -742,137 +658,65 @@ void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 	configCnt = 0;
 	batchRunning = true;
 	BuildConfFilesList();
+  // Next xml-configuration will be reloaded within
+  // ::ExportCompleted()
 	ProcessNextConfigFile();
-
-	// Hard code a list with configuration file-paths and gpx-saving-destinations
-	// Loop that list and trigger the same workflow as now
-	// create a private boolean to keep track if new process should be started
-	// 	-> set to false before StartAll
-	// 	-> set to true after ExportCompleted()
-	// TODO: no hardcoding read from conf file
-	/*
-	list<string> lst_str;
-	//lst_str.push_back("/home/magellan/gis/projects/antiker_seehandel/opencpn_configs/frejus_ostia.xml");
-	lst_str.push_back("/home/magellan/gis/projects/antiker_seehandel/opencpn_configs/ostia_carthago.xml");
-	   //
-	list<string>::iterator it = lst_str.begin();
-	for(int i=0 ;i<lst_str.size(); i++)*/
-	//{
-
-	      // TODO: rather us a thread with sleep interval
-	      //TODO: remove
-
-	//}
-	// Auto exporting is done from inside the TimerFunction (void WeatherRouting::OnComputationTimer( wxTimerEvent & )=
-
-
-    /*
-	for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
-	      WeatherRoute *weatherroute =
-	          reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-
-	}*/
-    // Sleeping blocks :(
-    //usleep(5 * 1000 * 1000);
-	// Use wxTimer to check periodically if all routes have been finished
-	//m_timer.setOwner(RemoveIncomplete);
-	//m_timer.setOwner(WeatherRouting::RemoveIncomplete);
-	//m_timer.Start(3000);
-
 }
 
-//TODO: needs renaming (actually just exports finished (at destination) routes)
+// Change: Export function to write
+// 1) the gpx files for finished routes
+// 2) the gpx files for failed polars
+// 3) the csv file as an overview of all routes
 void WeatherRouting::ExportCompleted()
 {
-	//std::cout << "Called by timer!" << std::endl;
-	//std::list<RouteMapOverlay *>allroutemapoverlays;
-    // STEP3: Delete non-finished
-	/*
-	std::cout << "Removing all incomplete routes..." << std::endl;
-	for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
-	      std::cout << i << std::endl;
-	      WeatherRoute *weatherroute =
-	          reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-	      //std::cout << weatherroute->GetItem(2) << std::endl;
-	      if (! weatherroute->routemapoverlay->ReachedDestination()) {
-	        std::cout << "Route has NOT finished!" << std::endl;
-	        allroutemapoverlays.push_back(weatherroute->routemapoverlay);
-	      }
-	      else {
-	        std::cout << "Route has finished!" << std::endl;
-	      }
-	  }
-	  if (allroutemapoverlays.size()) {
-		  std::cout << allroutemapoverlays.size() << std::endl;
-		  std::cout << "Delete unfinished routes..." << std::endl;
-		  DeleteRouteMaps(allroutemapoverlays);
-	  }
-
-	  std::cout << "Refresh the GUI..." << std::endl;
-	  GetParent()->Refresh();
-
-	// STEP4: Export to route database
-	  for(int i=0; i<m_lWeatherRoutes->GetItemCount(); i++) {
-	    Export(*reinterpret_cast<WeatherRoute*>
-	           (wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)))->routemapoverlay);
-	  }
-	*/
 	int exported = 0;
 	bool success;
-
-	// Export all finished routes
+	// STEP 1: Export all finished routes to gpx
 	for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
-		      //std::cout << i << std::endl;
-
-		      WeatherRoute *weatherroute =
-		          reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-		      //std::cout << weatherroute->GetItem(2) << std::endl;
-		      if (weatherroute->routemapoverlay->ReachedDestination()) {
+		WeatherRoute *weatherroute =
+		  reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
+		  if (weatherroute->routemapoverlay->ReachedDestination()) {
 		        success = Export(*weatherroute->routemapoverlay,
 		        				weatherroute->StartTime);
-		        if (success) {
-		        	exported++;
-		        }
-		      }
+		    if (success) {
+		      exported++;
+		    }
+		  }
 	}
 	std::cout << "Exported " << exported << " routes!" << std::endl;
 
-	  // TODO: could be a utility function
-	  wxString xml_file = confPaths.at(configCnt);
-	  xml_file.Replace (".xml", ".gpx");
-	  wxString gpx_file = xml_file;
+  // TODO: could be a utility function
+  // TODO: gpx export could be set in xml-batch configuration
+	wxString xml_file = confPaths.at(configCnt);
+	xml_file.Replace (".xml", ".gpx");
+	wxString gpx_file = xml_file;
 	if (exported > 0) {
 		std::cout << gpx_file << std::endl;
 		exportGpx(gpx_file);
 		deleteAllTracks();
 	}
 
-	  // Export all routes with failed polars
-	  // keep track of success
-	  exported = 0;
-	  gpx_file.Replace(".gpx", "_failed_polar.gpx");
-	  for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
-			      //std::cout << i << std::endl;
-			      WeatherRoute *weatherroute =
-			          reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-			      //std::cout << weatherroute->GetItem(2) << std::endl;
-			      //std::cout << weatherroute->State << std::endl;
-			      if (weatherroute->State == "Polar: Failed") {
-			    	  //std::cout << "Polar Failed" << std::endl;
-			    	  success = Export(*weatherroute->routemapoverlay,
-			    			           weatherroute->StartTime);
-			    	  if (success) {
-			    		  exported++;
-			    	  }
-			      }
-	   }
-	  if (exported > 0) {
-		  std::cout << gpx_file << std::endl;
-		  exportGpx(gpx_file);
-		  deleteAllTracks();
+	// STEP 2: Export all routes with failed polars
+  exported = 0;
+  gpx_file.Replace(".gpx", "_failed_polar.gpx");
+  for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
+    WeatherRoute *weatherroute =
+    reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
+    if (weatherroute->State == "Polar: Failed") {
+      success = Export(*weatherroute->routemapoverlay,
+        weatherroute->StartTime);
+        if (success) {
+          exported++;
+        }
+      }
+    }
+    if (exported > 0) {
+      std::cout << gpx_file << std::endl;
+      exportGpx(gpx_file);
+      deleteAllTracks();
+    }
 
-	  }
-	  // Export route infos as csv
+	  // STEP 3: Export route infos as csv
 	  xml_file = confPaths.at(configCnt);
 	  xml_file.Replace(".xml", ".csv");
 	  wxString csv_file = xml_file;
@@ -880,8 +724,7 @@ void WeatherRouting::ExportCompleted()
 	  std::cout << csv_file << std::endl;
 	  ExportRouteInfoAsCsv(csv_file);
 
-	  //if (configCnt != static_cast<int>(confPaths.size()-1)) {
-	  if (configCnt != (confPaths.size()-1)) {
+	  if (configCnt != static_cast<int>(confPaths.size()-1)) {
 		  configCnt++;
 		  ProcessNextConfigFile();
 	  } else {
@@ -889,11 +732,8 @@ void WeatherRouting::ExportCompleted()
 		  batchRunning = false;
 		  deleteAllTracks();
 	  }
-	  //std::cout << "Cleaning up!" << std::endl;
-	  //deleteAllTracks();
-
-
 }
+
 void WeatherRouting::OnEditConfiguration()
 {
     std::list<RouteMapOverlay *>routemapoverlays = CurrentRouteMaps(true);
@@ -982,35 +822,6 @@ void WeatherRouting::OnDeleteAll( wxCommandEvent& event )
     DeleteRouteMaps(allroutemapoverlays);
 
     GetParent()->Refresh();
-}
-
-void WeatherRouting::OnRemoveIncomplete( wxCommandEvent& event )
-{
-  std::cout << "Triggered from the GUI!" << std::endl;
-  std::cout << "Will remove all the incomplete" << std::endl;
-  std::list<RouteMapOverlay *>allroutemapoverlays;
-  for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
-      //std::cout << i << std::endl;
-      WeatherRoute *weatherroute =
-          reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-      //std::cout << weatherroute->GetItem(2) << std::endl;
-      if (! weatherroute->routemapoverlay->ReachedDestination()) {
-        std::cout << "Route has NOT finished!" << std::endl;
-        allroutemapoverlays.push_back(weatherroute->routemapoverlay);
-      }
-      else {
-        std::cout << "Route has finished!" << std::endl;
-      }
-  }
-  DeleteRouteMaps(allroutemapoverlays);
-  GetParent()->Refresh();
-
-  for(int i=0; i<m_lWeatherRoutes->GetItemCount(); i++) {
-    Export(*reinterpret_cast<WeatherRoute*>
-           (wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)))->routemapoverlay);
-  }
-
-
 }
 
 void WeatherRouting::OnWeatherRouteSort( wxListEvent& event )
@@ -1102,16 +913,8 @@ void WeatherRouting::UpdateComputeState()
     m_gProgress->SetRange(m_RoutesToRun);
     // CHANGE: is this the difference in behaviuor of the function?
     if (m_bRunning) {
-        std::cout << "Returning from updateComputeState" << std::endl;
         return;
     }
-    /*
-    if (!batchRunning) {
-        if (m_bRunning) {
-        	std::cout << "Returning from updateComputeState" << std::endl;
-            return;
-        }
-    }*/
     m_bRunning = true;
     m_gProgress->SetValue(0);
 
@@ -1119,7 +922,6 @@ void WeatherRouting::UpdateComputeState()
     m_bCompute->Enable();
     m_StartTime = wxDateTime::Now();
     m_tCompute.Start(1, true);
-    //std::cout << "Finished updateComputeState()" << std::endl;
 }
 
 void WeatherRouting::OnCompute( wxCommandEvent& event )
@@ -1133,22 +935,8 @@ void WeatherRouting::OnCompute( wxCommandEvent& event )
 
 void WeatherRouting::OnComputeAll ( wxCommandEvent& event )
 {
-	/*
-	if (batchRunning) {
-		if (m_bRunning) {
-			std::cout << "Switching m_bRunning state" << std::endl;
-			m_bRunning = false;
-		}
-	}
-	*/
-	/*
-	if (m_bRunning) {
-			std::cout << "m_bRunning is set to true in OnComputeAll"  << std::endl;
-	} else {
-			std::cout << "m_bRunning is set to false in OnComputeAll" << std::endl;
-	}*/
 	StartAll();
-    UpdateComputeState();
+  UpdateComputeState();
 }
 
 void WeatherRouting::OnStop( wxCommandEvent& event )
@@ -1169,7 +957,6 @@ void WeatherRouting::OnOpen( wxCommandEvent& event )
         wxCommandEvent event;
         OnDeleteAllPositions( event );
         OnDeleteAll( event );
-        OnRemoveIncomplete( event );
         OpenXML(openDialog.GetPath());
     }
 }
@@ -1426,8 +1213,6 @@ void WeatherRouting::OnAbout ( wxCommandEvent& event )
 
 void WeatherRouting::OnComputationTimer( wxTimerEvent & )
 {
-	//std::cout << "Size of Waiting Routes: " << std::endl;
-	//std::cout << m_WaitingRouteMaps.size() << std::endl;
     for(std::list<RouteMapOverlay*>::iterator it = m_RunningRouteMaps.begin();
         it != m_RunningRouteMaps.end(); ) {
         RouteMapOverlay *routemapoverlay = *it;
@@ -1505,32 +1290,21 @@ void WeatherRouting::OnComputationTimer( wxTimerEvent & )
            maybe we can do it from the thread instead to eliminate the delay */
         m_tCompute.Start(25, true);
         return;
-       // CHANGE: no more running instances so finished
     } else {
+        // CHANGE:
+        // The configuration reading batch process is still running, so we need
+        // to restart the 'funky timer'
     		if (batchRunning) {
+          // TODO: Export Completed is called prematurely
           // TODO: Check if there is something to export
           // This part also gets called event if no route computation so far
-          std::cout << "Item Count" << std::endl;
-          std::cout << m_lWeatherRoutes->GetItemCount() << std::endl;
+          std::cout << "Batch Process is still running, restarting..." << std::endl;
+          // TODO: check if there is something to export
           ExportCompleted();
           OnComputeAll(m_fakeEvent);
-          //StartAll();
-          //UpdateComputeState();
           m_tCompute.Start(250, true);
           return;
 				}
-    		/*else {
-				}
-    			std::cout << "Restarting Computing via simulated CLick" << std::endl;
-    			wxCommandEvent event;
-    			Reset();
-    			m_bRunning = true;
-    			OnComputeAll(event);
-    			//m_tCompute.Start(25, true);
-    		}*/
-
-
-    	//}
     }
 
     Stop();
@@ -1873,9 +1647,7 @@ void WeatherRouting::UpdateRouteMap(RouteMapOverlay *routemapoverlay)
    parameters but not computed route information */
 void WeatherRoute::Update(WeatherRouting *wr, bool stateonly)
 {
-    std::cout << "Calling Update" << std::endl;
     if(!stateonly) {
-        std::cout << "Calling Update II" << std::endl;
         RouteMapConfiguration configuration = routemapoverlay->GetConfiguration();
 
         BoatFilename = configuration.boatFileName;
@@ -1983,12 +1755,9 @@ void WeatherRoute::Update(WeatherRouting *wr, bool stateonly)
                 State += _("Failed");
             }
         } else {
-            // std::cout << wr->m_WaitingRouteMaps.begin() << std::endl;
-            // std::cout << wr->m_WaitingRouteMaps.end() << std::endl;
             for(std::list<RouteMapOverlay*>::iterator it = wr->m_WaitingRouteMaps.begin();
                 it != wr->m_WaitingRouteMaps.end(); it++)
                 if(*it == routemapoverlay) {
-                    std::cout << "Setting to waiting" << std::endl;
                     State = _("Waiting...");
                     return;
                 }
@@ -2185,13 +1954,17 @@ void WeatherRouting::RebuildList()
     }
 }
 
-// Overload function to add name on export
+// CHANGE: Overload function to add name on export
+// basically a duplicate of the original function
+// Used to export the start point as the route name
+// instead of the generic WeatherRoute
 bool WeatherRouting::Export(RouteMapOverlay &routemapoverlay, wxString routeName)
 {
     std::list<PlotData> plotdata = routemapoverlay.GetPlotData(false);
     std::cout << routeName << std::endl;
     if(plotdata.size() == 0) {
-      //std::cout << "Ignoring empty route data!" << std::endl;
+      // CHANGE: We ignore empty route data, as this is annoying and
+      //    breaks the automation
       /*
         wxMessageDialog mdlg(this, _("Empty Route, nothing to export\n"),
                              _("Weather Routing"), wxOK | wxICON_WARNING);
@@ -2218,13 +1991,13 @@ bool WeatherRouting::Export(RouteMapOverlay &routemapoverlay, wxString routeName
     return true;
 }
 
-// Change: set return type to true, to keep track if export was successfull!
 bool WeatherRouting::Export(RouteMapOverlay &routemapoverlay)
 {
     std::list<PlotData> plotdata = routemapoverlay.GetPlotData(false);
 
     if(plotdata.size() == 0) {
-      //std::cout << "Ignoring empty route data!" << std::endl;
+      // CHANGE: We ignore empty route data, as this is annoying and
+      //    breaks the automation
       /*
         wxMessageDialog mdlg(this, _("Empty Route, nothing to export\n"),
                              _("Weather Routing"), wxOK | wxICON_WARNING);
@@ -2258,11 +2031,9 @@ bool WeatherRouting::Export(RouteMapOverlay &routemapoverlay)
 
 void WeatherRouting::Start(RouteMapOverlay *routemapoverlay)
 {
-	//std::cout << "Starting single route..." << std::endl;
     if(!routemapoverlay ||
        (routemapoverlay->Finished() &&
         !routemapoverlay->GribFailed())) {
-    	std::cout << "Returning from start()" << std::endl;
     	return;
     }
 
@@ -2304,56 +2075,22 @@ void WeatherRouting::Start(RouteMapOverlay *routemapoverlay)
 
     routemapoverlay->Reset();
     m_RoutesToRun++;
-    std::cout << m_RoutesToRun << std::endl;
 
     m_WaitingRouteMaps.push_back(routemapoverlay);
-    //std::cout << m_WaitingRouteMaps.size() << std::endl;
     SetEnableConfigurationMenu();
     UpdateRouteMap(routemapoverlay);
-
-	//std::cout << "Start() function completed" << std::endl;
-    //std::cout << "End of started single route" << std::endl;
-    // CHANGE:
-    // check if all routes finished and call remove incomplete
-    // Problem no asynchronous call so immediately run
-    /*
-    if (autoExport) {
-    	std::cout << "Auto Export is on!" << std::endl;
-    	//std::list<RouteMapOverlay *>allroutemapoverlays;
-        // STEP3: Delete non-finished
-    	std::cout << "Checking if all routes have finished..." << std::endl;
-    	bool removeIncomplete = true;
-    	for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
-    		  std::cout << i << std::endl;
-    	      WeatherRoute *weatherroute =
-    	          reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-    	      if (weatherroute->routemapoverlay->Finished() == false) {
-    	    	  std::cout << "Route has not finished" << std::endl;
-    	      }
-    	      if (!weatherroute->routemapoverlay->Finished()) {
-    	    	  removeIncomplete = false;
-    	    	  break;
-    	      }
-    	}
-    	if (removeIncomplete) {
-    		RemoveIncomplete();
-    	}
-    	    		  //std::cout << weatherroute->GetItem(2) << std::endl;
-    }*///
 }
 
 void WeatherRouting::StartAll()
 {
-	//std::cout << "WeatherRoutesCount" << std::endl;
 	for(int i=0; i<m_lWeatherRoutes->GetItemCount(); i++) {
     	WeatherRoute *weatherroute = reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-        Start(weatherroute->routemapoverlay);
-    }
+      Start(weatherroute->routemapoverlay);
+  }
 }
 
 void WeatherRouting::Stop()
 {
-	//batchRunning = false;
     /* stop all the threads at once, rather than waiting for each one before
        telling the next to stop */
     for(std::list<RouteMapOverlay*>::iterator it = m_RunningRouteMaps.begin();
@@ -2385,7 +2122,9 @@ void WeatherRouting::Stop()
 
     m_RoutesToRun = 0;
     m_gProgress->SetValue(0);
-    //m_bRunning = false;
+    m_bRunning = false;
+    // CHANGE: set custom var for xml batch processing
+    batchRunning = false;
 
     SetEnableConfigurationMenu();
     if(m_StartTime.IsValid())
