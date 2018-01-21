@@ -168,6 +168,8 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
   // CHANGE: variable to keep track if a configuration file based batch
   // process is running
 	batchRunning = false;
+  // CHANGE:
+  pendingGribLoad = false;
 
 	m_default_configuration_path = weather_routing_pi::StandardPath()
         + _T("WeatherRoutingConfiguration.xml");
@@ -657,8 +659,20 @@ void WeatherRouting::ProcessNextConfigFile()
 	std::cout << currPath << std::endl;
 	std::cout << "Removing old tracks..." << std::endl;
 
-  std::cout << "Calling via plugin message" << std::endl;
-  SendPluginMessage(wxString(_T("GRIB_FILE_LOAD_REQUEST")), "/home/foo/my-grib.grib");
+  std::cout << "Calling via grib-plugin message" << std::endl;
+  std::cout << "PRE CHANGE VAL" << std::endl;
+  std::cout << pendingGribLoad << std::endl;
+  pendingGribLoad = true;
+  std::cout << "POST CHANGE VAL" << std::endl;
+  std::cout << pendingGribLoad << std::endl;
+  SendPluginMessage(
+    wxString(_T("GRIB_FILE_LOAD_REQUEST")),
+    // TBD: use actual GRIB val
+    "/home/foo/my-grib.grib"
+  );
+
+  // TBD: start blocking infinite loop that breaks on
+  // pendingGribLoad == false (when grib done loading)
 
   m_RoutesToRun = 0;
   // STEP1: Cleaning up old routes and positions
@@ -676,6 +690,15 @@ void WeatherRouting::ProcessNextConfigFile()
 	std::cout << "Starting route computation..." << std::endl;
   m_bRunning = false;
   OnComputeAll(m_fakeEvent);
+}
+
+bool WeatherRouting::getPendingGribLoad()
+{
+  return pendingGribLoad;
+}
+
+void WeatherRouting::SetPendingGribLoad(bool pending) {
+  pendingGribLoad = pending;
 }
 
 void WeatherRouting::OnLoadConfig(wxCommandEvent& event)

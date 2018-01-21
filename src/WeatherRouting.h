@@ -76,6 +76,9 @@ public:
     WeatherRouting(wxWindow *parent, weather_routing_pi &plugin);
     ~WeatherRouting();
 
+    // CHANGE:
+    void SetPendingGribLoad(bool pending);
+    bool getPendingGribLoad();
     void Reset();
 
     void Render(wrDC &dc, PlugIn_ViewPort &vp);
@@ -122,7 +125,6 @@ private:
     void ProcessNextConfigFile();
     void BuildConfFilesList();
     void ExportRouteInfoAsCsv(wxString csv_path);
-
     void OnNewPosition( wxCommandEvent& event );
     void OnUpdateBoat( wxCommandEvent& event );
     void OnDeletePosition( wxCommandEvent& event );
@@ -199,6 +201,8 @@ private:
     wxTimer m_tCompute, m_tHideConfiguration;
 
     //CHANGE: Hard coded list of config files to process
+    bool pendingGribLoad;
+    // TODO: check all vars if can be removed
     int configCnt;
     bool batchRunning;
     bool m_firstRound;

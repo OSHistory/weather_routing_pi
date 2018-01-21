@@ -271,9 +271,21 @@ void weather_routing_pi::SetPluginMessage(wxString &message_id, wxString &messag
             }
         }
     }
-    if (message_id == _T("GRIB_FILE_LOAD_REQUEST")) {
-      std::cout << "Calling GRib file from weather routing" << std::endl; 
+    if (message_id == _T("GRIB_FILE_LOAD_REQUEST"))
+    {
+      std::cout << "Calling GRib file from weather routing" << std::endl;
     }
+
+    if (message_id == _T("GRIB_FILE_LOAD_COMPLETE"))
+    {
+      std::cout << "Grib file is done loading change var for pending grib" << std::endl;
+      std::cout << "PRE CHANGE VAL" << std::endl;
+      std::cout << m_pWeather_Routing->getPendingGribLoad() << std::endl;
+      m_pWeather_Routing->SetPendingGribLoad(false);
+      std::cout << "POST CHANGE VAL" << std::endl;
+      std::cout << m_pWeather_Routing->getPendingGribLoad() << std::endl;
+    }
+
     if(message_id == _T("CLIMATOLOGY"))
     {
         if(!m_pWeather_Routing)
