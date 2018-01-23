@@ -206,7 +206,14 @@ private:
     int configCnt;
     bool batchRunning;
     bool m_firstRound;
-    std::vector<std::string> confPaths;
+    struct batch_config_t {
+      wxString confPath;
+      wxString gribPath;
+    };
+    // TODO: re-initialize on LoadConfig
+    // struct batch_config_t batchConfigs[100];
+    std::vector<batch_config_t> batchConfigs;
+    // std::vector<struct batch_config_t> confPaths;
     wxString m_confFilesInfoPath; // holds paths of configuration files to process
     wxCommandEvent m_fakeEvent; // Used to simulate GUI Interactions by calling their callback methods // note: event is mostly not actually used
 

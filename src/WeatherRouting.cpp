@@ -35,7 +35,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
-
 // CHANGE: User includes
 #include <fstream>
 #include <unistd.h>
@@ -164,7 +163,7 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
     UpdateColumns();
 
 	m_confFilesInfoPath = weather_routing_pi::StandardPath()
-		+ _T("ConfigFilePaths.txt");
+		+ _T("ConfigFilePaths.xml");
   // CHANGE: variable to keep track if a configuration file based batch
   // process is running
 	batchRunning = false;
@@ -257,23 +256,6 @@ WeatherRouting::~WeatherRouting( )
         delete *it;
 }
 
-void WeatherRouting::BuildConfFilesList()
-{
-	confPaths.clear();
-	std::ifstream infile(m_confFilesInfoPath);
-	std::string line;
-	wxString filepath;
-	wxFileName fn;
-	while (std::getline(infile, line))
-	{
-		std::cout << line << std::endl;
-		//line.erase(line.find_last_not_of(" \n\r\t")+1)
-		fn = wxFileName(line);
-		if (fn.FileExists()) {
-			confPaths.push_back(line);
-		}
-	}
-}
 
 void WeatherRouting::ExportRouteInfoAsCsv(wxString csv_path)
 {
@@ -653,8 +635,9 @@ void WeatherRouting::OnPositionKeyDown( wxListEvent& event )
 void WeatherRouting::ProcessNextConfigFile()
 {
 
-	string currPath = confPaths.at(configCnt);
-
+	batch_config_t currBatchConfig = batchConfigs.at(configCnt);
+  wxString currPath = currBatchConfig.confPath;
+  wxString gribPath = currBatchConfig.gribPath;
 	std::cout << "Processing file: " << std::endl;
 	std::cout << currPath << std::endl;
 	std::cout << "Removing old tracks..." << std::endl;
@@ -667,13 +650,19 @@ void WeatherRouting::ProcessNextConfigFile()
   std::cout << pendingGribLoad << std::endl;
   SendPluginMessage(
     wxString(_T("GRIB_FILE_LOAD_REQUEST")),
-    // TBD: use actual GRIB val
-    "/home/foo/my-grib.grib"
+    gribPath
   );
 
   // TBD: start blocking infinite loop that breaks on
   // pendingGribLoad == false (when grib done loading)
-
+  while (true) {
+    std::cout << "Sleeping for 1 second" << std::endl;
+    sleep(1);
+    if (!pendingGribLoad) {
+      std::cout << "Grib is done loading, will resume operations" << std::endl;
+      break; 
+    }
+  }
   m_RoutesToRun = 0;
   // STEP1: Cleaning up old routes and positions
   deleteAllTracks();
@@ -735,8 +724,9 @@ void WeatherRouting::ExportCompleted()
 
   // TODO: could be a utility function
   // TODO: gpx export could be set in xml-batch configuration
-	wxString xml_file = confPaths.at(configCnt);
-	xml_file.Replace (".xml", ".gpx");
+	batch_config_t currBatchConfig = batchConfigs.at(configCnt);
+  wxString xml_file = currBatchConfig.confPath;
+  xml_file.Replace (".xml", ".gpx");
 	wxString gpx_file = xml_file;
 	if (exported > 0) {
 		std::cout << gpx_file << std::endl;
@@ -765,14 +755,14 @@ void WeatherRouting::ExportCompleted()
     }
 
 	  // STEP 3: Export route infos as csv
-	  xml_file = confPaths.at(configCnt);
+	  xml_file = currBatchConfig.confPath;
 	  xml_file.Replace(".xml", ".csv");
 	  wxString csv_file = xml_file;
 
 	  std::cout << csv_file << std::endl;
 	  ExportRouteInfoAsCsv(csv_file);
 
-	  if (configCnt != static_cast<int>(confPaths.size()-1)) {
+	  if (configCnt != static_cast<int>(batchConfigs.size()-1)) {
 		  configCnt++;
 		  ProcessNextConfigFile();
 	  } else {
@@ -1372,6 +1362,53 @@ void WeatherRouting::OnRenderedTimer ( wxTimerEvent & )
         m_splitter1->SetSashPosition(sashpos, true);
         Disconnect(wxEVT_IDLE, wxTimerEventHandler(WeatherRouting::OnRenderedTimer ), NULL, this );
     }
+}
+
+// void WeatherRouting::BuildConfFilesList()
+// {
+//        confPaths.clear();
+//        std::ifstream infile(m_confFilesInfoPath);
+//        std::string line;
+//        wxString filepath;
+//        wxFileName fn;
+//        while (std::getline(infile, line))
+//        {
+//                std::cout << line << std::endl;
+//                //line.erase(line.find_last_not_of(" \n\r\t")+1)
+//                fn = wxFileName(line);
+//                if (fn.FileExists()) {
+//                        confPaths.push_back(line);
+//                }
+//        }
+// }
+
+void WeatherRouting::BuildConfFilesList()
+{
+       batchConfigs.clear();
+       TiXmlDocument doc(m_confFilesInfoPath);
+       bool loadOkay = doc.LoadFile();
+       wxString error;
+      //  wxFileName fn(m_confFilesInfoPath);
+      std::cout << m_confFilesInfoPath << std::endl;
+      //  if(!doc.LoadFile(m_confFilesInfoPath.mb_str()))
+      //     std::cout << "Failed to load file" << std::endl;
+      //     //  FAIL(_("Failed to load file."));
+      //  else {
+      if (!loadOkay) {
+        std::cout << "Load failed!" << std::endl;
+      } else {
+        std::cout << "Successfully opened file" << std::endl;
+        TiXmlElement* root = doc.RootElement();
+        int i=0;
+        for(TiXmlElement* e = root->FirstChildElement(); e != NULL; e = e->NextSiblingElement()) {
+          std::cout << e->Value() << std::endl;
+          batchConfigs.push_back(batch_config_t());
+          batchConfigs[i].confPath = e->FirstChildElement("ConfigPath")->GetText();
+          batchConfigs[i].gribPath = e->FirstChildElement("GribPath")->GetText();
+          i += 1;
+        }
+      }
+
 }
 
 bool WeatherRouting::OpenXML(wxString filename, bool reportfailure)
