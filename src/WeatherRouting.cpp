@@ -660,7 +660,7 @@ void WeatherRouting::ProcessNextConfigFile()
     sleep(1);
     if (!pendingGribLoad) {
       std::cout << "Grib is done loading, will resume operations" << std::endl;
-      break; 
+      break;
     }
   }
   m_RoutesToRun = 0;
