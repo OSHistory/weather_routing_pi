@@ -1263,7 +1263,11 @@ void WeatherRouting::OnComputationTimer( wxTimerEvent & )
             routemapoverlay->DeleteThread();
 
             it = m_RunningRouteMaps.erase(it);
-
+            int runRoutes = m_RoutesToRun - m_WaitingRouteMaps.size() - m_RunningRouteMaps.size();
+            if (runRoutes % 50 == 0) {
+              std::cout << "Progress: " << runRoutes << "/" << m_RoutesToRun
+                << "(" << (double)runRoutes / m_RoutesToRun << "%)" << std::endl;
+            }
             m_gProgress->SetValue(m_RoutesToRun - m_WaitingRouteMaps.size() - m_RunningRouteMaps.size());
             UpdateRouteMap(routemapoverlay);
 
