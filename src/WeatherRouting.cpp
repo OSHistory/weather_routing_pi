@@ -41,6 +41,7 @@
 #include <wx/timer.h>
 #include <sstream>
 #include <string>
+#include <time.h>
 
 #include <wx/glcanvas.h>
 #include "tinyxml/tinyxml.h"
@@ -641,6 +642,10 @@ void WeatherRouting::ProcessNextConfigFile()
 	std::cout << "Processing file: " << std::endl;
 	std::cout << currPath << std::endl;
 	std::cout << "Removing old tracks..." << std::endl;
+
+  time_t rawtime;
+  time (&rawtime);
+  printf ("Current Time: %s", ctime (&rawtime));
 
   std::cout << "Calling via grib-plugin message" << std::endl;
   std::cout << "PRE CHANGE VAL" << std::endl;

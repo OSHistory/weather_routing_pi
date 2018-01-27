@@ -58,7 +58,7 @@
    with the same sign are inner routes.  Once these regions are all normalized,
    the remaining regions with a different sign are the perminent subregions.
    Any inner routes remaining with matching sign can be discarded.
-   
+
    Any outer subregions are also normalized to give outer regions
    with both signs which can be appended to the incomming lists
 
@@ -347,7 +347,7 @@ static int ComputeQuadrant(Position *p, Position *q)
     double diff = p->lon - q->lon;
     while(diff < -180) diff += 360;
     while(diff >= 180) diff -= 360;
-    
+
     if(diff < 0)
         quadrant++;
 
@@ -452,7 +452,7 @@ static inline bool ReadWindAndCurrents(RouteMapConfiguration &configuration, Pos
                         max_direction = atlas.directions[i];
                         maxi = i;
                     }
-                
+
                 /* now compute next most likely wind octant (adjacent to most likely) and
                    linearly interpolate speed and direction from these two octants,
                    we use this as the most likely wind, and base wind direction for the map */
@@ -461,7 +461,7 @@ static inline bool ReadWindAndCurrents(RouteMapConfiguration &configuration, Pos
                     maxia = 0;
                 if(maxib < 0)
                     maxib = windatlas_count - 1;
-                
+
                 if(atlas.directions[maxia] < atlas.directions[maxib])
                     maxia = maxib;
 
@@ -471,7 +471,7 @@ static inline bool ReadWindAndCurrents(RouteMapConfiguration &configuration, Pos
                 while(angle2 - angle1 > 180) angle2 -= 360;
                 W = heading_resolve(maxid*angle1 + (1-maxid)*angle2);
                 VW = maxid*atlas.VW[maxia] + (1-maxid)*atlas.VW[maxi];
-        
+
                 OverGround(W, VW, C, VC, WG, VWG);
                 data_mask |= Position::CLIMATOLOGY_WIND;
                 return true;
@@ -575,7 +575,8 @@ static inline bool ComputeBoatSpeed
     /* failed to determine speed.. */
     if(isnan(B) || isnan(VB)) {
         // when does this hit??
-        printf("polar failed bad! %f %f %f %f\n", W, VW, B, VB);
+        // CHANGE: Comment out to decrease debugging output
+        // printf("polar failed bad! %f %f %f %f\n", W, VW, B, VB);
         configuration.polar_failed = true;
         return false; //B = VB = 0;
     }
@@ -646,13 +647,13 @@ bool Position::Propagate(IsoRouteList &routelist, RouteMapConfiguration &configu
 
     if(fabs(lat) > configuration.MaxLatitude)
         return false;
- 
+
     double WG, VWG, W, VW, C, VC;
     climatology_wind_atlas atlas;
     int data_mask = 0;
     if(!ReadWindAndCurrents(configuration, this,
                             WG, VWG, W, VW, C, VC, atlas, data_mask)) {
-        configuration.wind_data_failed = true;        
+        configuration.wind_data_failed = true;
         return false;
     }
 
@@ -714,11 +715,11 @@ bool Position::Propagate(IsoRouteList &routelist, RouteMapConfiguration &configu
             configuration.polar_failed = true;
             continue;
         }
-        
+
         if(!ComputeBoatSpeed(configuration, timeseconds, WG, VWG, W, VW, C, VC, H, atlas, data_mask,
                              B, VB, BG, VBG, dist, newpolar))
             continue;
-        
+
         /* did we tack thru the wind? apply penalty */
         bool tacked = false;
         if(parent_heading*H < 0 && fabs(parent_heading - H) < 180) {
@@ -796,7 +797,7 @@ bool Position::Propagate(IsoRouteList &routelist, RouteMapConfiguration &configu
         /* landfall test */
         if(configuration.DetectLand && CrossesLand(dlat, nrdlon))
             continue;
-        
+
         /* Boundary test */
         if(configuration.DetectBoundary && EntersBoundary(dlat, dlon))
             continue;
@@ -884,7 +885,7 @@ double Position::PropagateToEnd(RouteMapConfiguration &configuration, double &H,
             configuration.polar_failed = true;
             return NAN;
         }
-        
+
         if(!ComputeBoatSpeed(configuration, 0, WG, VWG, W, VW, C, VC, H, atlas, data_mask,
                              B, VB, BG, VBG, dummy_dist, newpolar))
             return NAN;
@@ -899,7 +900,7 @@ double Position::PropagateToEnd(RouteMapConfiguration &configuration, double &H,
        small amount of total computation */
     if(dist / VBG > configuration.dt / 3600.0)
         return NAN;
-    
+
     /* quick test first to avoid slower calculation */
     if(VB + VW > configuration.MaxApparentWindKnots &&
        Polar::VelocityApparentWind(VB, H, VW) > configuration.MaxApparentWindKnots)
@@ -1111,7 +1112,7 @@ int IsoRoute::IntersectionCount(Position &pos)
         if(state0 != state1) {
             double s1plat = s1->point->lat, s2plat = s2->point->lat;
             int state = (lat < s1plat) + (lat < s2plat);
-            
+
             switch(state) {
             case 1: /* must test every point in this case as point falls in boundaries of skip list */
             {
@@ -1127,8 +1128,8 @@ int IsoRoute::IntersectionCount(Position &pos)
 #if 1
                     if(lon == p1lon && lon == p2lon)
                         printf("degenerate case not handled properly\n");
-#endif 
-                    
+#endif
+
                     if(pstate0 != pstate1) {
                         double p1lat = p1->lat, p2lat = p2->lat;
                         state = (lat < p1lat) + (lat < p2lat);
@@ -1300,7 +1301,7 @@ void IsoRoute::FindIsoRouteBounds(double bounds[4])
         bounds[MAXLAT] = MAX(p->lat, bounds[MAXLAT]);
         bounds[MINLON] = MIN(p->lon, bounds[MINLON]);
         bounds[MAXLON] = MAX(p->lon, bounds[MAXLON]);
-            
+
         if(p->lat == bounds[MAXLAT])
             maxlat = s;
         s = s->next;
@@ -1574,10 +1575,10 @@ startnormalizing:
 
     Position *p = sp->point, *q = sq->point;
     double px = p->lon, qx = q->lon, py = p->lat, qy = q->lat;
-        
+
     double minx, maxx, miny, maxy;
     COMPUTE_MIN_MAX(sp->quadrant, p, q,)
-        
+
     Position *r, *s = ss->point;
 
     int dir;
@@ -1606,7 +1607,7 @@ startnormalizing:
         /* normalizing and overlapping round.. don't bother to calculate smaller bounds */
         pstart = sp->point;
         pend = sq->point;
-      
+
         rstart = sr->point;
         rend = ss->point;
         goto skip_bounds_compute;
@@ -1622,7 +1623,7 @@ startnormalizing:
     double minrx, maxrx, minry, maxry;
     rx = sr->point->lon, ry = sr->point->lat;
     COMPUTE_MIN_MAX(sr->quadrant, r, s, r)
-        
+
     pstart = pend = NULL;
     q = sp->point;
     qx = q->lon, qy = q->lat;
@@ -1647,7 +1648,7 @@ startnormalizing:
       goto done;
 //    if(pstart == pend)  // this is never hit in practice
 //      goto done;
-    
+
     rstart = rend = NULL;
     s = sr->point;
     rstate = state; /* still valid from before */
@@ -1672,7 +1673,7 @@ startnormalizing:
 #else
     pstart = sp->point;
     pend = sq->point;
-      
+
     rstart = sr->point;
     rend = ss->point;
 #endif
@@ -1681,7 +1682,7 @@ startnormalizing:
     p = pstart;
     do {
       q = p->next;
-      
+
       switch(nr) {
       case 1:
         s = q;
@@ -1770,7 +1771,7 @@ startnormalizing:
             FixSkipList(sp, ss, p, s, rquadrant, spend, ssend);
             FixSkipList(sr, sq, r, q, pquadrant, spend, ssend);
           }
-          
+
           if(normalizing) {
             /* did the end end up in the subroute? move it back out */
             if(UpdateEnd(spend, sr))
@@ -1834,7 +1835,7 @@ startnormalizing:
             for(IsoRouteList::iterator it = route2->children.begin();
                 it != route2->children.end(); it++)
                 (*it)->parent = route1;
-                
+
             /* merge children (append is currently incorrect)
                the children need to be merged, and any overlapping regions
                incremented so they don't get removed if contained */
@@ -1871,7 +1872,7 @@ startnormalizing:
 
           goto startnormalizing;
         }
-      skipmerge:        
+      skipmerge:
         COMPUTE_STATE(state, s, pq);
       skippr:;
       } while(s != rend);
@@ -1940,7 +1941,7 @@ bool Merge(IsoRouteList &rl, IsoRoute *route1, IsoRoute *route2, int level, bool
                     it2 != route2->children.end(); it2++)
                     delete *it2;
                 route2->children.clear();
-                
+
                 /* now determine if route2 affects any of route1's children,
                    if there are any intersections, it should mask away that area.
                    once completely merged, all the masks are removed and children
@@ -1956,7 +1957,7 @@ bool Merge(IsoRouteList &rl, IsoRoute *route1, IsoRoute *route2, int level, bool
                         route1->children.pop_front();
                         IsoRouteList childrl; /* see if there is a merge */
 
-                        if(Merge(childrl, r1, r2, 1, true)) { 
+                        if(Merge(childrl, r1, r2, 1, true)) {
                             for(IsoRouteList::iterator cit = childrl.begin(); cit != childrl.end(); cit++)
                                 if((*cit)->direction == route1->direction)
                                     childrenmask.push_back(*cit);
@@ -1970,7 +1971,7 @@ bool Merge(IsoRouteList &rl, IsoRoute *route1, IsoRoute *route2, int level, bool
                             mergedchildren.push_back(r2);
                     }
                     delete r1; /* all children have been tried, so done with this mask */
-                    
+
                 remerge_children:
                     route1->children.splice(route1->children.end(), mergedchildren);
                 }
@@ -2011,7 +2012,7 @@ Position *IsoRoute::ClosestPosition(double lat, double lon, double *dist)
 
         double dlat = lat - p->lat, dlon = lon - p->lon;
         double dist = dlat*dlat + dlon*dlon;
-            
+
         if(dist < mindist) {
             minpos = p;
             mindist = dist;
@@ -2046,7 +2047,7 @@ Position *IsoRoute::ClosestPosition(double lat, double lon, double *dist)
             for(p = p->next; p != e; p = p->next) {
                 double dlat = lat - p->lat, dlon = lon - p->lon;
                 double dist = dlat*dlat + dlon*dlon;
-                
+
                 if(dist < mindist) {
                     minpos = p;
                     mindist = dist;
@@ -2129,7 +2130,7 @@ void IsoRoute::PropagateToEnd(RouteMapConfiguration &configuration, double &mind
         if(!isnan(dt) && p->parent_heading*H < 0 && fabs(p->parent_heading - H) < 180) {
             tacked = true;
             dt += configuration.TackingTime;
-#if 0        
+#if 0
             if(configuration.MaxTacks >= 0 && p->tacks >= configuration.MaxTacks)
                 dt = NAN;
 #endif
@@ -2209,7 +2210,7 @@ void IsoChron::PropagateIntoList(IsoRouteList &routelist, RouteMapConfiguration 
 {
     for(IsoRouteList::iterator it = routes.begin(); it != routes.end(); ++it) {
         bool propagated = false;
-        
+
         IsoRoute *x = NULL;
         /* if anchoring is allowed, then we can propagate a second time,
            so copy the list before clearing the propagate flag,
@@ -2222,7 +2223,7 @@ void IsoChron::PropagateIntoList(IsoRouteList &routelist, RouteMapConfiguration 
            in the current iso */
         if((*it)->Propagate(routelist, configuration))
             propagated = true;
-        
+
         if(!configuration.Anchoring)
             x = new IsoRoute(*it);
 
@@ -2328,7 +2329,7 @@ bool RouteMapConfiguration::Update()
     ToDegree = wxMax(wxMin(ToDegree, 180), 0);
     if(FromDegree > ToDegree) FromDegree = ToDegree;
     ByDegrees = wxMax(wxMin(ByDegrees, 60), .1);
-    
+
     for(double step=FromDegree; step <= ToDegree; step += ByDegrees) {
         DegreeSteps.push_back(step);
         if(step > 0 && step < 180)
@@ -2421,7 +2422,7 @@ bool RouteMap::Propagate()
 
     // reset grib data deficient flag
     bool grib_is_data_deficient = false;
-        
+
     if(m_Configuration.AllowDataDeficient &&
        (!m_NewGrib ||
         !m_NewGrib->m_GribRecordPtrArray[Idx_WIND_VX] ||
@@ -2528,7 +2529,7 @@ Position *RouteMap::ClosestPosition(double lat, double lon, double *dist)
         it--;
         double dist;
         Position *pos = (*it)->ClosestPosition(p.lat, p.lon, &dist);
-        
+
         if(pos && dist < mindist) {
             minpos = pos;
             mindist = dist;
