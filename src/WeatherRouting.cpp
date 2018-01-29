@@ -1409,9 +1409,13 @@ void WeatherRouting::BuildConfFilesList()
         std::cout << "Successfully opened file" << std::endl;
         TiXmlElement* root = doc.RootElement();
         int i=0;
+        const char * _id;
         for(TiXmlElement* e = root->FirstChildElement(); e != NULL; e = e->NextSiblingElement()) {
           std::cout << e->Value() << std::endl;
           batchConfigs.push_back(batch_config_t());
+          _id = e->Attribute("id");
+          std::cout << _id << std::endl;
+
           batchConfigs[i].confPath = e->FirstChildElement("ConfigPath")->GetText();
           batchConfigs[i].gribPath = e->FirstChildElement("GribPath")->GetText();
           i += 1;
