@@ -778,7 +778,6 @@ void WeatherRouting::ExportCompleted()
     std::string stringId(batchConfigs.at(configCnt).id);
     processedConfs.push_back(stringId);
     UpdateProcessedConfsFile();
-    // TODO: Write processed Confs back to disk
 	  if (configCnt != static_cast<int>(batchConfigs.size()-1)) {
 		  configCnt++;
 		  ProcessNextConfigFile();
