@@ -26,6 +26,7 @@
 #ifndef _WEATHER_ROUTING_H_
 #define _WEATHER_ROUTING_H_
 
+#include <algorithm>
 
 #include <wx/treectrl.h>
 #include <wx/fileconf.h>
@@ -124,6 +125,8 @@ private:
     void ExportCompleted();
     void ProcessNextConfigFile();
     void BuildConfFilesList();
+    void BuildProcessedConfList();
+    void UpdateProcessedConfsFile(); 
     void ExportRouteInfoAsCsv(wxString csv_path);
     void OnNewPosition( wxCommandEvent& event );
     void OnUpdateBoat( wxCommandEvent& event );
@@ -207,6 +210,7 @@ private:
     bool batchRunning;
     bool m_firstRound;
     struct batch_config_t {
+      wxString id;
       wxString confPath;
       wxString gribPath;
     };
@@ -214,7 +218,9 @@ private:
     // struct batch_config_t batchConfigs[100];
     std::vector<batch_config_t> batchConfigs;
     // std::vector<struct batch_config_t> confPaths;
+    std::vector<std::string> processedConfs;
     wxString m_confFilesInfoPath; // holds paths of configuration files to process
+    wxString m_processedConfFiles; // holds ids of alread processed
     wxCommandEvent m_fakeEvent; // Used to simulate GUI Interactions by calling their callback methods // note: event is mostly not actually used
 
     bool m_bRunning;

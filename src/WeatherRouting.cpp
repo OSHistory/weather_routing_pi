@@ -36,7 +36,9 @@
 #include <math.h>
 #include <time.h>
 // CHANGE: User includes
+#include <algorithm>
 #include <fstream>
+#include <iterator>
 #include <unistd.h>
 #include <wx/timer.h>
 #include <sstream>
@@ -165,6 +167,10 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
 
 	m_confFilesInfoPath = weather_routing_pi::StandardPath()
 		+ _T("ConfigFilePaths.xml");
+
+  m_processedConfFiles = weather_routing_pi::StandardPath()
+  	+ _T("ProcessedConfigs.txt");
+
   // CHANGE: variable to keep track if a configuration file based batch
   // process is running
 	batchRunning = false;
@@ -684,6 +690,7 @@ void WeatherRouting::ProcessNextConfigFile()
 	std::cout << "Starting route computation..." << std::endl;
   m_bRunning = false;
   OnComputeAll(m_fakeEvent);
+
 }
 
 bool WeatherRouting::getPendingGribLoad()
@@ -699,6 +706,7 @@ void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 {
 	configCnt = 0;
 	batchRunning = true;
+  BuildProcessedConfList();
 	BuildConfFilesList();
   // Next xml-configuration will be reloaded within
   // ::ExportCompleted()
@@ -767,6 +775,10 @@ void WeatherRouting::ExportCompleted()
 	  std::cout << csv_file << std::endl;
 	  ExportRouteInfoAsCsv(csv_file);
 
+    std::string stringId(batchConfigs.at(configCnt).id);
+    processedConfs.push_back(stringId);
+    UpdateProcessedConfsFile();
+    // TODO: Write processed Confs back to disk
 	  if (configCnt != static_cast<int>(batchConfigs.size()-1)) {
 		  configCnt++;
 		  ProcessNextConfigFile();
@@ -775,6 +787,14 @@ void WeatherRouting::ExportCompleted()
 		  batchRunning = false;
 		  deleteAllTracks();
 	  }
+
+}
+
+void WeatherRouting::UpdateProcessedConfsFile()
+{
+    std::ofstream output_file(m_processedConfFiles);
+    std::ostream_iterator<std::string> output_iterator(output_file, "\n");
+    std::copy(processedConfs.begin(), processedConfs.end(), output_iterator);
 }
 
 void WeatherRouting::OnEditConfiguration()
@@ -1391,6 +1411,22 @@ void WeatherRouting::OnRenderedTimer ( wxTimerEvent & )
 //        }
 // }
 
+void WeatherRouting::BuildProcessedConfList()
+{
+  processedConfs.clear();
+	std::ifstream infile(m_processedConfFiles);
+	std::string line;
+	wxString filepath;
+	wxFileName fn;
+	while (std::getline(infile, line))
+	{
+		std::cout << line << std::endl;
+		//line.erase(line.find_last_not_of(" \n\r\t")+1)
+		fn = wxFileName(line);
+		processedConfs.push_back(line);
+	}
+}
+
 void WeatherRouting::BuildConfFilesList()
 {
        batchConfigs.clear();
@@ -1412,15 +1448,20 @@ void WeatherRouting::BuildConfFilesList()
         const char * _id;
         for(TiXmlElement* e = root->FirstChildElement(); e != NULL; e = e->NextSiblingElement()) {
           std::cout << e->Value() << std::endl;
-          batchConfigs.push_back(batch_config_t());
           _id = e->Attribute("id");
-          std::cout << _id << std::endl;
-
-          batchConfigs[i].confPath = e->FirstChildElement("ConfigPath")->GetText();
-          batchConfigs[i].gribPath = e->FirstChildElement("GribPath")->GetText();
-          i += 1;
+          // Check if in alread processed ids
+          if(std::find(processedConfs.begin(), processedConfs.end(), _id) != processedConfs.end()) {
+            std::cout << "Ignoring batch file, since already processed" << std::endl;
+            std::cout << _id << std::endl;
+          } else {
+            batchConfigs.push_back(batch_config_t());
+            batchConfigs[i].id = e->Attribute("id");
+            batchConfigs[i].confPath = e->FirstChildElement("ConfigPath")->GetText();
+            batchConfigs[i].gribPath = e->FirstChildElement("GribPath")->GetText();
+            i += 1;
         }
       }
+    }
 
 }
 
