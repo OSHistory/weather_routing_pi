@@ -710,7 +710,11 @@ void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 	BuildConfFilesList();
   // Next xml-configuration will be reloaded within
   // ::ExportCompleted()
-	ProcessNextConfigFile();
+  if (batchConfigs.size() == 0) {
+    std::cout << "All configuration files have already been processed!" << std::endl;
+  } else {
+    ProcessNextConfigFile();
+  }
 }
 
 // Change: Export function to write
