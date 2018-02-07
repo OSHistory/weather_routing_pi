@@ -641,7 +641,7 @@ void WeatherRouting::OnPositionKeyDown( wxListEvent& event )
 // Deleting and exporting is done in
 void WeatherRouting::ProcessNextConfigFile()
 {
-
+  time (&currentConfigLoadStart);
 	batch_config_t currBatchConfig = batchConfigs.at(configCnt);
   wxString currPath = currBatchConfig.confPath;
   wxString gribPath = currBatchConfig.gribPath;
@@ -704,6 +704,7 @@ void WeatherRouting::SetPendingGribLoad(bool pending) {
 
 void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 {
+  time( &globalConfigLoadStart);
 	configCnt = 0;
 	batchRunning = true;
   BuildProcessedConfList();
@@ -1279,6 +1280,9 @@ void WeatherRouting::OnAbout ( wxCommandEvent& event )
 
 void WeatherRouting::OnComputationTimer( wxTimerEvent & )
 {
+    time_t now;
+    time (&now);
+
     for(std::list<RouteMapOverlay*>::iterator it = m_RunningRouteMaps.begin();
         it != m_RunningRouteMaps.end(); ) {
         RouteMapOverlay *routemapoverlay = *it;
@@ -1287,9 +1291,13 @@ void WeatherRouting::OnComputationTimer( wxTimerEvent & )
 
             it = m_RunningRouteMaps.erase(it);
             int runRoutes = m_RoutesToRun - m_WaitingRouteMaps.size() - m_RunningRouteMaps.size();
-            if (runRoutes % 50 == 0) {
+            if (runRoutes % 25 == 0) {
+              double timeElapsed = difftime(now, currentConfigLoadStart);
               std::cout << "Progress: " << runRoutes << "/" << m_RoutesToRun
-                << "(" << (double)runRoutes / m_RoutesToRun << "%)" << std::endl;
+                << "(" << (double)runRoutes / m_RoutesToRun << "%)"
+                << " in " << timeElapsed << " seconds "
+                << "(average: " << timeElapsed / runRoutes << " sec)"
+                << std::endl;
             }
             m_gProgress->SetValue(m_RoutesToRun - m_WaitingRouteMaps.size() - m_RunningRouteMaps.size());
             UpdateRouteMap(routemapoverlay);

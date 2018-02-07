@@ -117,6 +117,11 @@ public:
     SettingsDialog m_SettingsDialog;
     //CHANGE: bind original event to var
     wxCommandEvent configEvent;
+    // CHANGE: keep track of processing time (via time_t)
+    // TODO: Use miliseconds, cross-platform approach
+    time_t globalConfigLoadStart;
+    time_t currentConfigLoadStart;
+
 private:
 
     // CHANGE:
@@ -126,7 +131,7 @@ private:
     void ProcessNextConfigFile();
     void BuildConfFilesList();
     void BuildProcessedConfList();
-    void UpdateProcessedConfsFile(); 
+    void UpdateProcessedConfsFile();
     void ExportRouteInfoAsCsv(wxString csv_path);
     void OnNewPosition( wxCommandEvent& event );
     void OnUpdateBoat( wxCommandEvent& event );
