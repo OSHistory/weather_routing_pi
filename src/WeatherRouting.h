@@ -45,6 +45,11 @@
 class weather_routing_pi;
 class WeatherRouting;
 
+class WeatherRoute;
+
+// CHANGE: Thread to periodically checking for updated config file
+class ConfigFileCheckThread;
+
 class WeatherRoute
 {
 public:
@@ -208,7 +213,9 @@ private:
 
     wxTimer m_tCompute, m_tHideConfiguration;
 
-    //CHANGE: Hard coded list of config files to process
+    // thread to periodically check for new config file
+    ConfigFileCheckThread *m_ConfigFileCheckThread;
+    //CHANGE: Var to check if grib has been loaded
     bool pendingGribLoad;
     // TODO: check all vars if can be removed
     int configCnt;
