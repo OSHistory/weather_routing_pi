@@ -104,16 +104,9 @@ public:
         }
 
     void *Entry() {
-        wxString piMessage = "Check config file";
         while (true) {
           std::cout << "Hello from thread" << std::endl;
           wxThread::Sleep(400);
-          // TODO: rather pass instance of weather routing as reference to
-          // the thread
-          SendPluginMessage(
-            wxString(_T("AUTOMATISATION_CHECK_CONFIG_FILE_REQUEST")),
-            piMessage; 
-          );
           // m_WeatherRouting.
         }
         return 0;
