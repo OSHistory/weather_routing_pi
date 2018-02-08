@@ -86,7 +86,9 @@ public:
     void SetPendingGribLoad(bool pending);
     bool getPendingGribLoad();
     bool getBatchRunning();
-    
+    void ExternalLoadBatchConfig(); 
+
+
     void Reset();
 
     void Render(wrDC &dc, PlugIn_ViewPort &vp);
@@ -133,6 +135,7 @@ private:
 
     // CHANGE:
     void OnLoadConfig( wxCommandEvent& event);
+    void LoadBatchConfig();
     void OnRemoveIncomplete (wxTimerEvent& event);
     void ExportCompleted();
     void ProcessNextConfigFile();

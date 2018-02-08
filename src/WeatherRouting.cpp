@@ -36,6 +36,7 @@
 #include <math.h>
 #include <time.h>
 // CHANGE: User includes
+#include <wx/thread.h>
 #include <algorithm>
 #include <fstream>
 #include <iterator>
@@ -123,10 +124,17 @@ public:
         }
 
     void *Entry() {
+        std::cout << "Sleeping for 10 seconds to let program settle in..." << std::endl;
+        wxThread::Sleep(10 * 1000);
         while (true) {
+          wxThread::Wait();
           std::cout << "Hello from thread" << std::endl;
-          std::cout << m_wr.getBatchRunning() << std::endl; 
-          wxThread::Sleep(400);
+          std::cout << m_wr.getBatchRunning() << std::endl;
+          if (!m_wr.getBatchRunning()) {
+            std::cout << "Should start batch process" << std::endl;
+            m_wr.ExternalLoadBatchConfig();
+          }
+          wxThread::Sleep(4000);
           // m_WeatherRouting.
         }
         return 0;
@@ -755,11 +763,24 @@ bool WeatherRouting::getBatchRunning()
 }
 void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 {
+  std::cout << "Loading batch via GUI" << std::endl;
+  LoadBatchConfig();
+}
+
+void WeatherRouting::ExternalLoadBatchConfig()
+{
+  std::cout << "Loading batch via public function" << std::endl;
+  LoadBatchConfig();
+}
+
+void WeatherRouting::LoadBatchConfig()
+{
+  std::cout << "Loading private batch function" << std::endl;
   time( &globalConfigLoadStart);
-	configCnt = 0;
-	batchRunning = true;
+  configCnt = 0;
+  batchRunning = true;
   BuildProcessedConfList();
-	BuildConfFilesList();
+  BuildConfFilesList();
   // Next xml-configuration will be reloaded within
   // ::ExportCompleted()
   if (batchConfigs.size() == 0) {
@@ -768,7 +789,6 @@ void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
     ProcessNextConfigFile();
   }
 }
-
 // Change: Export function to write
 // 1) the gpx files for finished routes
 // 2) the gpx files for failed polars
@@ -1509,7 +1529,6 @@ void WeatherRouting::BuildConfFilesList()
         int i=0;
         const char * _id;
         for(TiXmlElement* e = root->FirstChildElement(); e != NULL; e = e->NextSiblingElement()) {
-          std::cout << e->Value() << std::endl;
           _id = e->Attribute("id");
           // Check if in alread processed ids
           if(std::find(processedConfs.begin(), processedConfs.end(), _id) != processedConfs.end()) {
