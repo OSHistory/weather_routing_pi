@@ -85,6 +85,8 @@ public:
     // CHANGE:
     void SetPendingGribLoad(bool pending);
     bool getPendingGribLoad();
+    bool getBatchRunning();
+    
     void Reset();
 
     void Render(wrDC &dc, PlugIn_ViewPort &vp);

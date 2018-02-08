@@ -92,13 +92,32 @@ static const char *eye[]={
 "...................."};
 
 
+// class CrossOverGenerationThread : public wxThread
+// {
+// public:
+//     CrossOverGenerationThread(Boat &boat, BoatDialog &dlg)
+//         : wxThread(wxTHREAD_JOINABLE), m_Boat(boat),
+//           m_BoatDialog(dlg)
+//         {
+//             Create();
+//         }
+//
+//     void *Entry() {
+//         m_Boat.GenerateCrossOverChart(&m_BoatDialog, status);
+//         return 0;
+//     }
+//
+//     Boat m_Boat;
+//     BoatDialog &m_BoatDialog;
+// };
+
 
 // CHANGE: Thread to periodically Check for updated config file
 class ConfigFileCheckThread : public wxThread
 {
 public:
-    ConfigFileCheckThread()
-        : wxThread(wxTHREAD_JOINABLE)
+    ConfigFileCheckThread(WeatherRouting &wr)
+        : wxThread(wxTHREAD_JOINABLE), m_wr(wr)
         {
             Create();
         }
@@ -106,12 +125,14 @@ public:
     void *Entry() {
         while (true) {
           std::cout << "Hello from thread" << std::endl;
+          std::cout << m_wr.getBatchRunning() << std::endl; 
           wxThread::Sleep(400);
           // m_WeatherRouting.
         }
         return 0;
     }
 
+    WeatherRouting &m_wr;
 };
 
 
@@ -259,7 +280,7 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
 
     SetEnableConfigurationMenu();
     std::cout << "Creating Thread" << std::endl;
-    m_ConfigFileCheckThread = new ConfigFileCheckThread();
+    m_ConfigFileCheckThread = new ConfigFileCheckThread(*this);
     m_ConfigFileCheckThread->Run();
     // m_Boat, *this
 }
@@ -728,6 +749,10 @@ void WeatherRouting::SetPendingGribLoad(bool pending) {
   pendingGribLoad = pending;
 }
 
+bool WeatherRouting::getBatchRunning()
+{
+  return batchRunning;
+}
 void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 {
   time( &globalConfigLoadStart);
