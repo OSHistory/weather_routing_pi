@@ -726,7 +726,6 @@ void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 
 void WeatherRouting::OnCheckConfigBatchTimer(wxTimerEvent& event)
 {
-  std::cout << batchRunning << std::endl;
   if (!batchRunning) {
     std::cout << "Restarting batch process from timer" << std::endl;
     LoadBatchConfig();
@@ -1325,7 +1324,7 @@ void WeatherRouting::OnComputationTimer( wxTimerEvent & )
             if (runRoutes % 25 == 0) {
               double timeElapsed = difftime(now, currentConfigLoadStart);
               std::cout << "Progress: " << runRoutes << "/" << m_RoutesToRun
-                << "(" << (double)runRoutes / m_RoutesToRun << "%)"
+                << "(" << 100 * (double)runRoutes / m_RoutesToRun << "%)"
                 << " in " << timeElapsed << " seconds "
                 << "(average: " << timeElapsed / runRoutes << " sec)"
                 << std::endl;
