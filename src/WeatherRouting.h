@@ -86,7 +86,7 @@ public:
     void SetPendingGribLoad(bool pending);
     bool getPendingGribLoad();
     bool getBatchRunning();
-    void ExternalLoadBatchConfig(); 
+    void ExternalLoadBatchConfig();
 
 
     void Reset();
@@ -134,6 +134,7 @@ public:
 private:
 
     // CHANGE:
+    void OnCheckConfigBatchTimer (wxTimerEvent& event);
     void OnLoadConfig( wxCommandEvent& event);
     void LoadBatchConfig();
     void OnRemoveIncomplete (wxTimerEvent& event);
@@ -220,10 +221,13 @@ private:
 
     // thread to periodically check for new config file
     ConfigFileCheckThread *m_ConfigFileCheckThread;
-    //CHANGE: Var to check if grib has been loaded
+    //CHANGE:
+    // Var to check if grib has been loaded
     bool pendingGribLoad;
     // TODO: check all vars if can be removed
     int configCnt;
+    // Timer to check periodically if batch config process should be called
+    wxTimer m_tCheckConfigBatch;
     bool batchRunning;
     bool m_firstRound;
     struct batch_config_t {

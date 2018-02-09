@@ -287,9 +287,15 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
                        ( WeatherRouting::OnRenderedTimer ), NULL, this);
 
     SetEnableConfigurationMenu();
-    std::cout << "Creating Thread" << std::endl;
-    m_ConfigFileCheckThread = new ConfigFileCheckThread(*this);
-    m_ConfigFileCheckThread->Run();
+
+    // std::cout << "Creating Thread" << std::endl;
+    // m_ConfigFileCheckThread = new ConfigFileCheckThread(*this);
+    // m_ConfigFileCheckThread->Run();
+
+    std::cout << "Creating WxTimer" << std::endl;
+    m_tCheckConfigBatch.Connect(wxEVT_TIMER, wxTimerEventHandler
+                       ( WeatherRouting::OnCheckConfigBatchTimer ), NULL, this);
+    m_tCheckConfigBatch.Start(10 * 1000);
     // m_Boat, *this
 }
 
@@ -767,6 +773,17 @@ void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
   LoadBatchConfig();
 }
 
+void WeatherRouting::OnCheckConfigBatchTimer(wxTimerEvent& event)
+{
+  std::cout << "Timer hit!" << std::endl;
+  std::cout << batchRunning << std::endl;
+  if (!batchRunning) {
+    std::cout << "Should start batch process" << std::endl;
+    LoadBatchConfig();
+  }
+}
+
+// TODO: If timer works better, may be removed
 void WeatherRouting::ExternalLoadBatchConfig()
 {
   std::cout << "Loading batch via public function" << std::endl;
