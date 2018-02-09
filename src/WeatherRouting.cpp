@@ -93,55 +93,6 @@ static const char *eye[]={
 "...................."};
 
 
-// class CrossOverGenerationThread : public wxThread
-// {
-// public:
-//     CrossOverGenerationThread(Boat &boat, BoatDialog &dlg)
-//         : wxThread(wxTHREAD_JOINABLE), m_Boat(boat),
-//           m_BoatDialog(dlg)
-//         {
-//             Create();
-//         }
-//
-//     void *Entry() {
-//         m_Boat.GenerateCrossOverChart(&m_BoatDialog, status);
-//         return 0;
-//     }
-//
-//     Boat m_Boat;
-//     BoatDialog &m_BoatDialog;
-// };
-
-
-// CHANGE: Thread to periodically Check for updated config file
-class ConfigFileCheckThread : public wxThread
-{
-public:
-    ConfigFileCheckThread(WeatherRouting &wr)
-        : wxThread(wxTHREAD_JOINABLE), m_wr(wr)
-        {
-            Create();
-        }
-
-    void *Entry() {
-        std::cout << "Sleeping for 10 seconds to let program settle in..." << std::endl;
-        wxThread::Sleep(10 * 1000);
-        while (true) {
-          wxThread::Wait();
-          std::cout << "Hello from thread" << std::endl;
-          std::cout << m_wr.getBatchRunning() << std::endl;
-          if (!m_wr.getBatchRunning()) {
-            std::cout << "Should start batch process" << std::endl;
-            m_wr.ExternalLoadBatchConfig();
-          }
-          wxThread::Sleep(4000);
-          // m_WeatherRouting.
-        }
-        return 0;
-    }
-
-    WeatherRouting &m_wr;
-};
 
 
 WeatherRoute::WeatherRoute() : routemapoverlay(new RouteMapOverlay) {}
@@ -288,15 +239,13 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
 
     SetEnableConfigurationMenu();
 
-    // std::cout << "Creating Thread" << std::endl;
-    // m_ConfigFileCheckThread = new ConfigFileCheckThread(*this);
-    // m_ConfigFileCheckThread->Run();
 
-    std::cout << "Creating WxTimer" << std::endl;
+    // Check every 10 Seconds for the ConfigFile.xml and run all
+    // batch processes
+    // TODO: Set this to a sane value in a producation system
     m_tCheckConfigBatch.Connect(wxEVT_TIMER, wxTimerEventHandler
                        ( WeatherRouting::OnCheckConfigBatchTimer ), NULL, this);
     m_tCheckConfigBatch.Start(10 * 1000);
-    // m_Boat, *this
 }
 
 WeatherRouting::~WeatherRouting( )
@@ -763,7 +712,7 @@ void WeatherRouting::SetPendingGribLoad(bool pending) {
   pendingGribLoad = pending;
 }
 
-bool WeatherRouting::getBatchRunning()
+bool WeatherRouting::GetBatchRunning()
 {
   return batchRunning;
 }
@@ -775,19 +724,11 @@ void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
 
 void WeatherRouting::OnCheckConfigBatchTimer(wxTimerEvent& event)
 {
-  std::cout << "Timer hit!" << std::endl;
   std::cout << batchRunning << std::endl;
   if (!batchRunning) {
-    std::cout << "Should start batch process" << std::endl;
+    std::cout << "Restarting batch process from timer" << std::endl;
     LoadBatchConfig();
   }
-}
-
-// TODO: If timer works better, may be removed
-void WeatherRouting::ExternalLoadBatchConfig()
-{
-  std::cout << "Loading batch via public function" << std::endl;
-  LoadBatchConfig();
 }
 
 void WeatherRouting::LoadBatchConfig()

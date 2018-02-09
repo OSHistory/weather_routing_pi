@@ -47,8 +47,6 @@ class WeatherRouting;
 
 class WeatherRoute;
 
-// CHANGE: Thread to periodically checking for updated config file
-class ConfigFileCheckThread;
 
 class WeatherRoute
 {
@@ -85,8 +83,7 @@ public:
     // CHANGE:
     void SetPendingGribLoad(bool pending);
     bool getPendingGribLoad();
-    bool getBatchRunning();
-    void ExternalLoadBatchConfig();
+    bool GetBatchRunning();
 
 
     void Reset();
@@ -137,13 +134,13 @@ private:
     void OnCheckConfigBatchTimer (wxTimerEvent& event);
     void OnLoadConfig( wxCommandEvent& event);
     void LoadBatchConfig();
-    void OnRemoveIncomplete (wxTimerEvent& event);
     void ExportCompleted();
     void ProcessNextConfigFile();
     void BuildConfFilesList();
     void BuildProcessedConfList();
     void UpdateProcessedConfsFile();
     void ExportRouteInfoAsCsv(wxString csv_path);
+    void OnRemoveIncomplete (wxTimerEvent& event);
     void OnNewPosition( wxCommandEvent& event );
     void OnUpdateBoat( wxCommandEvent& event );
     void OnDeletePosition( wxCommandEvent& event );
@@ -219,8 +216,6 @@ private:
 
     wxTimer m_tCompute, m_tHideConfiguration;
 
-    // thread to periodically check for new config file
-    ConfigFileCheckThread *m_ConfigFileCheckThread;
     //CHANGE:
     // Var to check if grib has been loaded
     bool pendingGribLoad;

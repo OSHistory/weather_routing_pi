@@ -125,7 +125,7 @@ int weather_routing_pi::Init(void)
 
       // Load the main window
       // TODO: Side effects of choosing zero?
-      OnToolbarToolCallback(0);
+      // OnToolbarToolCallback(0);
 
       return (WANTS_OVERLAY_CALLBACK |
               WANTS_OPENGL_OVERLAY_CALLBACK |
