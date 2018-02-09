@@ -240,12 +240,14 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
     SetEnableConfigurationMenu();
 
 
-    // Check every 10 Seconds for the ConfigFile.xml and run all
+    // Check every x Seconds for the ConfigFile.xml and run all
     // batch processes
-    // TODO: Set this to a sane value in a producation system
     m_tCheckConfigBatch.Connect(wxEVT_TIMER, wxTimerEventHandler
                        ( WeatherRouting::OnCheckConfigBatchTimer ), NULL, this);
-    m_tCheckConfigBatch.Start(10 * 1000);
+    pConf->SetPath ( _T( "/Automatization" ) );
+    pConf->Read ( _T ( "CheckConfigInterval" ), &intervall);
+    std::cout << "Intervall: " << intervall << std::endl;
+    m_tCheckConfigBatch.Start(intervall * 1000);
 }
 
 WeatherRouting::~WeatherRouting( )

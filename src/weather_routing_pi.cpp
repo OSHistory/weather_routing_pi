@@ -128,9 +128,15 @@ int weather_routing_pi::Init(void)
       //    And load the configuration items
       LoadConfig();
 
+      bool autoStart;
+      m_pconfig->SetPath ( _T( "/Automatization" ) );
+      m_pconfig->Read ( _T ( "AutoStartPlugins" ), &autoStart);
       // Load the main window
       // TODO: Side effects of choosing zero?
-      // OnToolbarToolCallback(0);
+      if (autoStart) {
+        std::cout << "Auto start requested " << std::endl;
+        OnToolbarToolCallback(0);
+      }
 
       return (WANTS_OVERLAY_CALLBACK |
               WANTS_OPENGL_OVERLAY_CALLBACK |

@@ -76,6 +76,7 @@ public:
     long columns[NUM_COLS];
     static const wxString column_names[NUM_COLS];
     int sashpos;
+    int intervall; 
 
     WeatherRouting(wxWindow *parent, weather_routing_pi &plugin);
     ~WeatherRouting();
