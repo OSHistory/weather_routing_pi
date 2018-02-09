@@ -987,7 +987,7 @@ std::list<PlotData> &RouteMapOverlay::GetPlotData(bool cursor_route)
 
             PlotData data;
 
-            double dt = configuration.dt;
+            double dt = configuration.DeltaTime;
             data.time = (*it)->time;
 
             data.lat = pos->lat, data.lon = pos->lon;
@@ -1194,9 +1194,9 @@ void RouteMapOverlay::UpdateDestination()
         }
         Unlock();
 
-        if(isinf(mindt))
+        if(isinf(mindt)) {
             goto not_able_to_propagate;
-
+        }
         destination_position = new Position(configuration.EndLat, configuration.EndLon,
                                             endp, minH, NAN, endp->polar, endp->tacks + mintacked,
                                             mindata_mask);
