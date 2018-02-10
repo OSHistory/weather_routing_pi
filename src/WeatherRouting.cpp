@@ -246,6 +246,7 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
                        ( WeatherRouting::OnCheckConfigBatchTimer ), NULL, this);
     pConf->SetPath ( _T( "/Automatization" ) );
     pConf->Read ( _T ( "LogToConsole"), &logToConsole);
+    pConf->Read (_T("logProgressStep"), &logProgressStep);
     pConf->Read ( _T ( "CheckConfigInterval" ), &intervall);
     wxLogMessage("AUTOMATION: Intervall set to %d seconds", intervall);
     if (logToConsole) {
@@ -1362,23 +1363,23 @@ void WeatherRouting::OnComputationTimer( wxTimerEvent & )
             it = m_RunningRouteMaps.erase(it);
             int runRoutes = m_RoutesToRun - m_WaitingRouteMaps.size() - m_RunningRouteMaps.size();
             // TODO: set from configuration file
-            if (runRoutes % 25 == 0) {
+            if (runRoutes % logProgressStep == 0) {
               double timeElapsed = difftime(now, currentConfigLoadStart);
               wxLogMessage(
-                "AUTOMATION: Progress: %d/%d (%f%%) in %f seconds (avg: %f sec)",
+                "AUTOMATION: Progress: %d/%d (%f%%) in %d seconds (avg: %f sec)",
                 runRoutes,
                 m_RoutesToRun,
                 100 * ((double)runRoutes / m_RoutesToRun),
-                timeElapsed,
+                (int)timeElapsed,
                 timeElapsed / runRoutes
               );
               if (logToConsole) {
                 printf(
-                  "Progress: %d/%d (%f%%) in %f seconds (avg: %f sec)",
+                  "Progress: %d/%d (%f%%) in %d seconds (avg: %f sec)\n",
                   runRoutes,
                   m_RoutesToRun,
                   100 * ((double)runRoutes / m_RoutesToRun),
-                  timeElapsed,
+                  (int)timeElapsed,
                   timeElapsed / runRoutes
                 );
               }

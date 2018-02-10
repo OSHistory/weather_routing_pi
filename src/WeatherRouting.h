@@ -225,6 +225,8 @@ private:
     int intervall;
     // Should we log to console (set from config)
     bool logToConsole;
+    // When to report progress
+    int logProgressStep; 
     // Timer to check periodically if batch config process should be called
     wxTimer m_tCheckConfigBatch;
     bool batchRunning;
