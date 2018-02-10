@@ -76,7 +76,7 @@ public:
     long columns[NUM_COLS];
     static const wxString column_names[NUM_COLS];
     int sashpos;
-    int intervall; 
+    int intervall;
 
     WeatherRouting(wxWindow *parent, weather_routing_pi &plugin);
     ~WeatherRouting();
@@ -85,7 +85,7 @@ public:
     void SetPendingGribLoad(bool pending);
     bool getPendingGribLoad();
     bool GetBatchRunning();
-
+    // END CHANGE: 
 
     void Reset();
 
@@ -133,7 +133,6 @@ private:
 
     // CHANGE:
     void OnCheckConfigBatchTimer (wxTimerEvent& event);
-    void OnLoadConfig( wxCommandEvent& event);
     void LoadBatchConfig();
     void ExportCompleted();
     void ProcessNextConfigFile();
@@ -141,6 +140,7 @@ private:
     void BuildProcessedConfList();
     void UpdateProcessedConfsFile();
     void ExportRouteInfoAsCsv(wxString csv_path);
+    // END CHANGE
     void OnRemoveIncomplete (wxTimerEvent& event);
     void OnNewPosition( wxCommandEvent& event );
     void OnUpdateBoat( wxCommandEvent& event );
@@ -220,30 +220,30 @@ private:
     //CHANGE:
     // Var to check if grib has been loaded
     bool pendingGribLoad;
-    // TODO: check all vars if can be removed
+    // Counter to get current configuraiton object from batch task
     int configCnt;
     // Timer to check periodically if batch config process should be called
     wxTimer m_tCheckConfigBatch;
     bool batchRunning;
-    bool m_firstRound;
+    // Structur to store the xml information
     struct batch_config_t {
       wxString id;
       wxString confPath;
       wxString gribPath;
     };
-    // TODO: re-initialize on LoadConfig
-    // struct batch_config_t batchConfigs[100];
     std::vector<batch_config_t> batchConfigs;
-    // std::vector<struct batch_config_t> confPaths;
     std::vector<std::string> processedConfs;
     wxString m_confFilesInfoPath; // holds paths of configuration files to process
     wxString m_processedConfFiles; // holds ids of alread processed
-    wxCommandEvent m_fakeEvent; // Used to simulate GUI Interactions by calling their callback methods // note: event is mostly not actually used
+    wxCommandEvent m_fakeEvent; // Used to simulate GUI Interactions by calling their     callback methods // note: event is mostly not actually used
 
+    // Variable to store if a batch process is running
     bool m_bRunning;
+
     wxTimeSpan m_RunTime;
     wxDateTime m_StartTime;
-    wxTimer m_timer;
+    // END CHANGE
+
     wxString m_default_configuration_path;
 
     int m_RoutesToRun;

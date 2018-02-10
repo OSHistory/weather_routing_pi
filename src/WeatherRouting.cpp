@@ -248,6 +248,7 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
     pConf->Read ( _T ( "CheckConfigInterval" ), &intervall);
     std::cout << "Intervall: " << intervall << std::endl;
     m_tCheckConfigBatch.Start(intervall * 1000);
+    wxLogMessage("Intervall set to %d seconds", intervall);
 }
 
 WeatherRouting::~WeatherRouting( )
@@ -717,11 +718,6 @@ void WeatherRouting::SetPendingGribLoad(bool pending) {
 bool WeatherRouting::GetBatchRunning()
 {
   return batchRunning;
-}
-void WeatherRouting::OnLoadConfig(wxCommandEvent& event)
-{
-  std::cout << "Loading batch via GUI" << std::endl;
-  LoadBatchConfig();
 }
 
 void WeatherRouting::OnCheckConfigBatchTimer(wxTimerEvent& event)
