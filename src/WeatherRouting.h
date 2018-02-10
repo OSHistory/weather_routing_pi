@@ -221,12 +221,14 @@ private:
     bool pendingGribLoad;
     // Counter to get current configuraiton object from batch task
     int configCnt;
+    // Should we start a periodically check for config (set from config)
+    bool batchComputationThread;
     // Intervall for periodic checks on config change (set from config)
     int intervall;
     // Should we log to console (set from config)
     bool logToConsole;
     // When to report progress
-    int logProgressStep; 
+    int logProgressStep;
     // Timer to check periodically if batch config process should be called
     wxTimer m_tCheckConfigBatch;
     bool batchRunning;

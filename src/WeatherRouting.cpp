@@ -246,13 +246,21 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
                        ( WeatherRouting::OnCheckConfigBatchTimer ), NULL, this);
     pConf->SetPath ( _T( "/Automatization" ) );
     pConf->Read ( _T ( "LogToConsole"), &logToConsole);
+    pConf->Read( _T("BatchComputationThread"), &batchComputationThread);
     pConf->Read (_T("logProgressStep"), &logProgressStep);
     pConf->Read ( _T ( "CheckConfigInterval" ), &intervall);
-    wxLogMessage("AUTOMATION: Intervall set to %d seconds", intervall);
-    if (logToConsole) {
-      printf("Intervall set to %d seconds\n", intervall);
+    if (batchComputationThread) {
+      wxLogMessage("AUTOMATION: Intervall set to %d seconds", intervall);
+      if (logToConsole) {
+        printf("Intervall set to %d seconds\n", intervall);
+      }
+      m_tCheckConfigBatch.Start(intervall * 1000);
+    } else {
+      wxLogMessage("AUTOMATION: No Batch Config Check requested!");
+      if (logToConsole) {
+        printf("No Batch Config Check requested!\n");
+      }
     }
-    m_tCheckConfigBatch.Start(intervall * 1000);
 }
 
 WeatherRouting::~WeatherRouting( )
