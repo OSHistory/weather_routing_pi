@@ -809,14 +809,13 @@ void WeatherRouting::ExportCompleted()
 		deleteAllTracks();
 	}
 
-	// STEP 2: Export all routes with failed polars
+	// STEP 2: Export all failed routes
   int failedExported = 0;
-  gpxFile.Replace(".gpx", "_failed_polar.gpx");
+  gpxFile.Replace(".gpx", "_failed_routes.gpx");
   for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
     WeatherRoute *weatherroute =
     reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-    std::cout << weatherroute->State << std::endl;
-    if (weatherroute->State == "Polar: Failed") {
+    if (weatherroute->State.find("Failed")!=std::string::npos) {
       success = Export(*weatherroute->routemapoverlay,
         weatherroute->StartTime);
         if (success) {
@@ -824,9 +823,9 @@ void WeatherRouting::ExportCompleted()
         }
       }
     }
-    wxLogMessage("AUTOMATION: Exported %d failed routes.", completeExported);
+    wxLogMessage("AUTOMATION: Exported %d failed routes.", failedExported);
     if (logToConsole) {
-      printf("AUTOMATION: Exported %d failed routes.\n", completeExported);
+      printf("AUTOMATION: Exported %d failed routes.\n", failedExported);
     }
     if (failedExported > 0) {
       if (logToConsole) {
