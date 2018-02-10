@@ -245,10 +245,13 @@ WeatherRouting::WeatherRouting(wxWindow *parent, weather_routing_pi &plugin)
     m_tCheckConfigBatch.Connect(wxEVT_TIMER, wxTimerEventHandler
                        ( WeatherRouting::OnCheckConfigBatchTimer ), NULL, this);
     pConf->SetPath ( _T( "/Automatization" ) );
+    pConf->Read ( _T ( "LogToConsole"), &logToConsole);
     pConf->Read ( _T ( "CheckConfigInterval" ), &intervall);
-    std::cout << "Intervall: " << intervall << std::endl;
+    wxLogMessage("AUTOMATION: Intervall set to %d seconds", intervall);
+    if (logToConsole) {
+      printf("Intervall set to %d seconds\n", intervall);
+    }
     m_tCheckConfigBatch.Start(intervall * 1000);
-    wxLogMessage("Intervall set to %d seconds", intervall);
 }
 
 WeatherRouting::~WeatherRouting( )
@@ -277,37 +280,37 @@ WeatherRouting::~WeatherRouting( )
 }
 
 
-void WeatherRouting::ExportRouteInfoAsCsv(wxString csv_path)
+void WeatherRouting::ExportRouteInfoAsCsv(wxString csvPath)
 {
-	ofstream csv_file;
-	csv_file.open (csv_path);
+	ofstream csvFile;
+	csvFile.open (csvPath);
 
 	for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
 		      WeatherRoute *weatherroute =
 		          reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
-		      csv_file << weatherroute->Start << ";";
-		      csv_file << weatherroute->StartTime << ";";
-		      csv_file << weatherroute->End << ";";
-		      csv_file << weatherroute->EndTime << ";";
-		      csv_file << weatherroute->Time << ";";
-		      csv_file << weatherroute->Distance << ";";
-		      csv_file << weatherroute->AvgSpeed << ";";
-		      csv_file << weatherroute->MaxSpeed << ";";
-		      csv_file << weatherroute->AvgSpeedGround << ";";
-		      csv_file << weatherroute->MaxSpeedGround << ";";
-		      csv_file << weatherroute->AvgWind << ";";
-		      csv_file << weatherroute->MaxWind << ";";
-		      csv_file << weatherroute->AvgCurrent << ";";
-		      csv_file << weatherroute->MaxCurrent << ";";
-		      csv_file << weatherroute->AvgSwell << ";";
-		      csv_file << weatherroute->MaxSwell << ";";
-		      csv_file << weatherroute->UpwindPercentage << ";";
-		      csv_file << weatherroute->PortStarboard << ";";
-		      csv_file << weatherroute->Tacks << ";";
-		      csv_file << weatherroute->State << "";
-		      csv_file << std::endl;
+		      csvFile << weatherroute->Start << ";";
+		      csvFile << weatherroute->StartTime << ";";
+		      csvFile << weatherroute->End << ";";
+		      csvFile << weatherroute->EndTime << ";";
+		      csvFile << weatherroute->Time << ";";
+		      csvFile << weatherroute->Distance << ";";
+		      csvFile << weatherroute->AvgSpeed << ";";
+		      csvFile << weatherroute->MaxSpeed << ";";
+		      csvFile << weatherroute->AvgSpeedGround << ";";
+		      csvFile << weatherroute->MaxSpeedGround << ";";
+		      csvFile << weatherroute->AvgWind << ";";
+		      csvFile << weatherroute->MaxWind << ";";
+		      csvFile << weatherroute->AvgCurrent << ";";
+		      csvFile << weatherroute->MaxCurrent << ";";
+		      csvFile << weatherroute->AvgSwell << ";";
+		      csvFile << weatherroute->MaxSwell << ";";
+		      csvFile << weatherroute->UpwindPercentage << ";";
+		      csvFile << weatherroute->PortStarboard << ";";
+		      csvFile << weatherroute->Tacks << ";";
+		      csvFile << weatherroute->State << "";
+		      csvFile << std::endl;
 	}
-	csv_file.close();
+	csvFile.close();
 
 }
 
@@ -658,49 +661,63 @@ void WeatherRouting::ProcessNextConfigFile()
 	batch_config_t currBatchConfig = batchConfigs.at(configCnt);
   wxString currPath = currBatchConfig.confPath;
   wxString gribPath = currBatchConfig.gribPath;
-	std::cout << "Processing file: " << std::endl;
-	std::cout << currPath << std::endl;
-	std::cout << "Removing old tracks..." << std::endl;
+  wxLogMessage("AUTOMATION: Processing Configuration: %s", currPath);
+  if (logToConsole) {
+    // TODO: Reenable rawtime reference
+    // printf ("Current Time: %s", ctime (&rawtime));
+    printf("Processing Configuration: %s", currPath.mb_str().data());
+  }
+  wxLogMessage("AUTOMATION: Removing old tracks");
+  if (logToConsole) {
+    std::cout << "Removing old tracks..." << std::endl;
+  }
 
   time_t rawtime;
   time (&rawtime);
-  printf ("Current Time: %s", ctime (&rawtime));
 
-  std::cout << "Calling via grib-plugin message" << std::endl;
-  std::cout << "PRE CHANGE VAL" << std::endl;
-  std::cout << pendingGribLoad << std::endl;
+  if (logToConsole) {
+    printf("Requesting GRIB-File: %s\n", gribPath.mb_str().data());
+  }
   pendingGribLoad = true;
-  std::cout << "POST CHANGE VAL" << std::endl;
-  std::cout << pendingGribLoad << std::endl;
   SendPluginMessage(
     wxString(_T("GRIB_FILE_LOAD_REQUEST")),
     gribPath
   );
 
-  // TBD: start blocking infinite loop that breaks on
+  // Start blocking infinite loop that breaks on
   // pendingGribLoad == false (when grib done loading)
   while (true) {
-    std::cout << "Sleeping for 1 second" << std::endl;
+    if (logToConsole) {
+      std::cout << "Sleeping for 1 second" << std::endl;
+    }
     sleep(1);
     if (!pendingGribLoad) {
-      std::cout << "Grib is done loading, will resume operations" << std::endl;
+      if (logToConsole) {
+        std::cout << "Grib is done loading, will resume operations" << std::endl;
+      }
+      wxLogMessage("AUTOMATION: Done Loading GRIB-File: %s", gribPath);
       break;
     }
   }
   m_RoutesToRun = 0;
   // STEP1: Cleaning up old routes and positions
+  wxLogMessage("AUTOMATION: Cleaning up old routes");
   deleteAllTracks();
   OnDeleteAllPositions(m_fakeEvent);
   OnDeleteAll(m_fakeEvent);
 
   // Step 2: Load xml confguration file
+  wxLogMessage("AUTOMATION: Loading Configuration %s", currPath);
   OpenXML(currPath, true);
   UpdateConfigurations();
   UpdateColumns();
   GetParent()->Refresh();
 
   // STEP 3: Compute all routes
-	std::cout << "Starting route computation..." << std::endl;
+  wxLogMessage("Starting route computation");
+  if (logToConsole) {
+    std::cout << "Starting route computation" << std::endl;
+  }
   m_bRunning = false;
   OnComputeAll(m_fakeEvent);
 
@@ -723,14 +740,16 @@ bool WeatherRouting::GetBatchRunning()
 void WeatherRouting::OnCheckConfigBatchTimer(wxTimerEvent& event)
 {
   if (!batchRunning) {
-    std::cout << "Restarting batch process from timer" << std::endl;
+    wxLogMessage("AUTOMATION: Restarting batch process from timer");
+    if (logToConsole) {
+      std::cout << "Restarting batch process from timer" << std::endl;
+    }
     LoadBatchConfig();
   }
 }
 
 void WeatherRouting::LoadBatchConfig()
 {
-  std::cout << "Loading private batch function" << std::endl;
   time( &globalConfigLoadStart);
   configCnt = 0;
   batchRunning = true;
@@ -739,7 +758,10 @@ void WeatherRouting::LoadBatchConfig()
   // Next xml-configuration will be reloaded within
   // ::ExportCompleted()
   if (batchConfigs.size() == 0) {
-    std::cout << "All configuration files have already been processed!" << std::endl;
+    wxLogMessage("All configuration files have been processed!");
+    if (logToConsole) {
+      std::cout << "All configuration files have been processed!" << std::endl;
+    }
   } else {
     ProcessNextConfigFile();
   }
@@ -750,7 +772,8 @@ void WeatherRouting::LoadBatchConfig()
 // 3) the csv file as an overview of all routes
 void WeatherRouting::ExportCompleted()
 {
-	int exported = 0;
+  // TODO: Rename
+	int completeExported = 0;
 	bool success;
 	// STEP 1: Export all finished routes to gpx
 	for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
@@ -760,27 +783,34 @@ void WeatherRouting::ExportCompleted()
 		        success = Export(*weatherroute->routemapoverlay,
 		        				weatherroute->StartTime);
 		    if (success) {
-		      exported++;
+		      completeExported++;
 		    }
 		  }
 	}
-	std::cout << "Exported " << exported << " routes!" << std::endl;
+  wxLogMessage("AUTOMATION: Exported %d completed routes.", completeExported);
+  if (logToConsole) {
+    printf("AUTOMATION: Exported %d completed routes.", completeExported);
+  }
 
   // TODO: could be a utility function
   // TODO: gpx export could be set in xml-batch configuration
 	batch_config_t currBatchConfig = batchConfigs.at(configCnt);
   wxString xml_file = currBatchConfig.confPath;
   xml_file.Replace (".xml", ".gpx");
-	wxString gpx_file = xml_file;
-	if (exported > 0) {
-		std::cout << gpx_file << std::endl;
-		exportGpx(gpx_file);
+	wxString gpxFile = xml_file;
+	if (completeExported > 0) {
+    if (logToConsole) {
+      printf("Exporting completed to %s", gpxFile.mb_str().data());
+    }
+    wxLogMessage("AUTOMATION: Exporting completed to %s", gpxFile);
+    exportGpx(gpxFile);
+    wxLogMessage("AUTOMATION: Deleting all tracks");
 		deleteAllTracks();
 	}
 
 	// STEP 2: Export all routes with failed polars
-  exported = 0;
-  gpx_file.Replace(".gpx", "_failed_polar.gpx");
+  int failedExported = 0;
+  gpxFile.Replace(".gpx", "_failed_polar.gpx");
   for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
     WeatherRoute *weatherroute =
     reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
@@ -788,23 +818,34 @@ void WeatherRouting::ExportCompleted()
       success = Export(*weatherroute->routemapoverlay,
         weatherroute->StartTime);
         if (success) {
-          exported++;
+          failedExported++;
         }
       }
     }
-    if (exported > 0) {
-      std::cout << gpx_file << std::endl;
-      exportGpx(gpx_file);
+    wxLogMessage("AUTOMATION: Exported %d failed routes.", completeExported);
+    if (logToConsole) {
+      printf("AUTOMATION: Exported %d failed routes.", completeExported);
+    }
+    if (failedExported > 0) {
+      if (logToConsole) {
+        printf("Exporting failed to %s", gpxFile.mb_str().data());
+      }
+      wxLogMessage("AUTOMATION: Exporting failed to %s", gpxFile);
+      exportGpx(gpxFile);
+      wxLogMessage("AUTOMATION: Deleting all tracks");
       deleteAllTracks();
     }
 
 	  // STEP 3: Export route infos as csv
 	  xml_file = currBatchConfig.confPath;
 	  xml_file.Replace(".xml", ".csv");
-	  wxString csv_file = xml_file;
+	  wxString csvFile = xml_file;
 
-	  std::cout << csv_file << std::endl;
-	  ExportRouteInfoAsCsv(csv_file);
+    if (logToConsole) {
+      printf("Exporting to meta-information to %s", csvFile.mb_str().data());
+    }
+    wxLogMessage("Exporting to meta-information to %s", csvFile);
+	  ExportRouteInfoAsCsv(csvFile);
 
     std::string stringId(batchConfigs.at(configCnt).id);
     processedConfs.push_back(stringId);
@@ -813,7 +854,10 @@ void WeatherRouting::ExportCompleted()
 		  configCnt++;
 		  ProcessNextConfigFile();
 	  } else {
-		  std::cout << "No more files to process, cleaning up..." << std::endl;
+      if (logToConsole) {
+        printf("No more files to process, cleaning up");
+      }
+      wxLogMessage("AUTOMATION: Processed all files. Cleaning up.");
 		  batchRunning = false;
 		  deleteAllTracks();
 	  }
@@ -1317,13 +1361,27 @@ void WeatherRouting::OnComputationTimer( wxTimerEvent & )
 
             it = m_RunningRouteMaps.erase(it);
             int runRoutes = m_RoutesToRun - m_WaitingRouteMaps.size() - m_RunningRouteMaps.size();
+            // TODO: set from configuration file
             if (runRoutes % 25 == 0) {
               double timeElapsed = difftime(now, currentConfigLoadStart);
-              std::cout << "Progress: " << runRoutes << "/" << m_RoutesToRun
-                << "(" << 100 * (double)runRoutes / m_RoutesToRun << "%)"
-                << " in " << timeElapsed << " seconds "
-                << "(average: " << timeElapsed / runRoutes << " sec)"
-                << std::endl;
+              wxLogMessage(
+                "AUTOMATION: Progress: %d/%d (%f%%) in %f seconds (avg: %f sec)",
+                runRoutes,
+                m_RoutesToRun,
+                100 * ((double)runRoutes / m_RoutesToRun),
+                timeElapsed,
+                timeElapsed / runRoutes
+              );
+              if (logToConsole) {
+                printf(
+                  "Progress: %d/%d (%f%%) in %f seconds (avg: %f sec)",
+                  runRoutes,
+                  m_RoutesToRun,
+                  100 * ((double)runRoutes / m_RoutesToRun),
+                  timeElapsed,
+                  timeElapsed / runRoutes
+                );
+              }
             }
             m_gProgress->SetValue(m_RoutesToRun - m_WaitingRouteMaps.size() - m_RunningRouteMaps.size());
             UpdateRouteMap(routemapoverlay);
@@ -1430,23 +1488,6 @@ void WeatherRouting::OnRenderedTimer ( wxTimerEvent & )
     }
 }
 
-// void WeatherRouting::BuildConfFilesList()
-// {
-//        confPaths.clear();
-//        std::ifstream infile(m_confFilesInfoPath);
-//        std::string line;
-//        wxString filepath;
-//        wxFileName fn;
-//        while (std::getline(infile, line))
-//        {
-//                std::cout << line << std::endl;
-//                //line.erase(line.find_last_not_of(" \n\r\t")+1)
-//                fn = wxFileName(line);
-//                if (fn.FileExists()) {
-//                        confPaths.push_back(line);
-//                }
-//        }
-// }
 
 void WeatherRouting::BuildProcessedConfList()
 {
@@ -1457,8 +1498,6 @@ void WeatherRouting::BuildProcessedConfList()
 	wxFileName fn;
 	while (std::getline(infile, line))
 	{
-		std::cout << line << std::endl;
-		//line.erase(line.find_last_not_of(" \n\r\t")+1)
 		fn = wxFileName(line);
 		processedConfs.push_back(line);
 	}
@@ -1470,25 +1509,23 @@ void WeatherRouting::BuildConfFilesList()
        TiXmlDocument doc(m_confFilesInfoPath);
        bool loadOkay = doc.LoadFile();
        wxString error;
-      //  wxFileName fn(m_confFilesInfoPath);
-      std::cout << m_confFilesInfoPath << std::endl;
-      //  if(!doc.LoadFile(m_confFilesInfoPath.mb_str()))
-      //     std::cout << "Failed to load file" << std::endl;
-      //     //  FAIL(_("Failed to load file."));
-      //  else {
       if (!loadOkay) {
-        std::cout << "Load failed!" << std::endl;
+        wxLogError("Failed to load batch configuration xml: %s", m_confFilesInfoPath);
+        if (logToConsole) {
+            printf(
+              "Failed to load batch configuration xml: %s", m_confFilesInfoPath.mb_str().data()
+            );
+        }
       } else {
-        std::cout << "Successfully opened file" << std::endl;
         TiXmlElement* root = doc.RootElement();
         int i=0;
+        int ignoredCnt = 0;
         const char * _id;
         for(TiXmlElement* e = root->FirstChildElement(); e != NULL; e = e->NextSiblingElement()) {
           _id = e->Attribute("id");
           // Check if in alread processed ids
           if(std::find(processedConfs.begin(), processedConfs.end(), _id) != processedConfs.end()) {
-            std::cout << "Ignoring batch file, since already processed" << std::endl;
-            std::cout << _id << std::endl;
+            ignoredCnt++;
           } else {
             batchConfigs.push_back(batch_config_t());
             batchConfigs[i].id = e->Attribute("id");
@@ -1497,8 +1534,13 @@ void WeatherRouting::BuildConfFilesList()
             i += 1;
         }
       }
+      if (ignoredCnt > 0) {
+        wxLogMessage("AUTOMATION: Ignored %d already processed routes", ignoredCnt);
+        if (logToConsole) {
+          printf("Ignored %d already processed routes", ignoredCnt);
+        }
+      }
     }
-
 }
 
 bool WeatherRouting::OpenXML(wxString filename, bool reportfailure)
@@ -2168,7 +2210,6 @@ void WeatherRouting::RebuildList()
 bool WeatherRouting::Export(RouteMapOverlay &routemapoverlay, wxString routeName)
 {
     std::list<PlotData> plotdata = routemapoverlay.GetPlotData(false);
-    std::cout << routeName << std::endl;
     if(plotdata.size() == 0) {
       // CHANGE: We ignore empty route data, as this is annoying and
       //    breaks the automation

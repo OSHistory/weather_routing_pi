@@ -76,7 +76,6 @@ public:
     long columns[NUM_COLS];
     static const wxString column_names[NUM_COLS];
     int sashpos;
-    int intervall;
 
     WeatherRouting(wxWindow *parent, weather_routing_pi &plugin);
     ~WeatherRouting();
@@ -85,7 +84,7 @@ public:
     void SetPendingGribLoad(bool pending);
     bool getPendingGribLoad();
     bool GetBatchRunning();
-    // END CHANGE: 
+    // END CHANGE:
 
     void Reset();
 
@@ -222,6 +221,10 @@ private:
     bool pendingGribLoad;
     // Counter to get current configuraiton object from batch task
     int configCnt;
+    // Intervall for periodic checks on config change (set from config)
+    int intervall;
+    // Should we log to console (set from config)
+    bool logToConsole;
     // Timer to check periodically if batch config process should be called
     wxTimer m_tCheckConfigBatch;
     bool batchRunning;
@@ -235,7 +238,9 @@ private:
     std::vector<std::string> processedConfs;
     wxString m_confFilesInfoPath; // holds paths of configuration files to process
     wxString m_processedConfFiles; // holds ids of alread processed
-    wxCommandEvent m_fakeEvent; // Used to simulate GUI Interactions by calling their     callback methods // note: event is mostly not actually used
+    // Used to simulate GUI Interactions by calling their callback methods
+    // note: event is mostly actually not used
+    wxCommandEvent m_fakeEvent;
 
     // Variable to store if a batch process is running
     bool m_bRunning;
