@@ -666,7 +666,7 @@ void WeatherRouting::ProcessNextConfigFile()
   if (logToConsole) {
     // TODO: Reenable rawtime reference
     // printf ("Current Time: %s", ctime (&rawtime));
-    printf("Processing Configuration: %s", currPath.mb_str().data());
+    printf("Processing Configuration: %s\n", currPath.mb_str().data());
   }
   wxLogMessage("AUTOMATION: Removing old tracks");
   if (logToConsole) {
@@ -790,7 +790,7 @@ void WeatherRouting::ExportCompleted()
 	}
   wxLogMessage("AUTOMATION: Exported %d completed routes.", completeExported);
   if (logToConsole) {
-    printf("AUTOMATION: Exported %d completed routes.", completeExported);
+    printf("AUTOMATION: Exported %d completed routes.\n", completeExported);
   }
 
   // TODO: could be a utility function
@@ -801,7 +801,7 @@ void WeatherRouting::ExportCompleted()
 	wxString gpxFile = xml_file;
 	if (completeExported > 0) {
     if (logToConsole) {
-      printf("Exporting completed to %s", gpxFile.mb_str().data());
+      printf("Exporting completed to %s\n", gpxFile.mb_str().data());
     }
     wxLogMessage("AUTOMATION: Exporting completed to %s", gpxFile);
     exportGpx(gpxFile);
@@ -815,6 +815,7 @@ void WeatherRouting::ExportCompleted()
   for(int i=0; i< m_lWeatherRoutes->GetItemCount(); i++) {
     WeatherRoute *weatherroute =
     reinterpret_cast<WeatherRoute*>(wxUIntToPtr(m_lWeatherRoutes->GetItemData(i)));
+    std::cout << weatherroute->State << std::endl;
     if (weatherroute->State == "Polar: Failed") {
       success = Export(*weatherroute->routemapoverlay,
         weatherroute->StartTime);
@@ -825,11 +826,11 @@ void WeatherRouting::ExportCompleted()
     }
     wxLogMessage("AUTOMATION: Exported %d failed routes.", completeExported);
     if (logToConsole) {
-      printf("AUTOMATION: Exported %d failed routes.", completeExported);
+      printf("AUTOMATION: Exported %d failed routes.\n", completeExported);
     }
     if (failedExported > 0) {
       if (logToConsole) {
-        printf("Exporting failed to %s", gpxFile.mb_str().data());
+        printf("Exporting failed routes to %s\n", gpxFile.mb_str().data());
       }
       wxLogMessage("AUTOMATION: Exporting failed to %s", gpxFile);
       exportGpx(gpxFile);
@@ -843,7 +844,7 @@ void WeatherRouting::ExportCompleted()
 	  wxString csvFile = xml_file;
 
     if (logToConsole) {
-      printf("Exporting to meta-information to %s", csvFile.mb_str().data());
+      printf("Exporting to meta-information to %s\n", csvFile.mb_str().data());
     }
     wxLogMessage("Exporting to meta-information to %s", csvFile);
 	  ExportRouteInfoAsCsv(csvFile);
@@ -856,7 +857,7 @@ void WeatherRouting::ExportCompleted()
 		  ProcessNextConfigFile();
 	  } else {
       if (logToConsole) {
-        printf("No more files to process, cleaning up");
+        printf("No more files to process, cleaning up\n");
       }
       wxLogMessage("AUTOMATION: Processed all files. Cleaning up.");
 		  batchRunning = false;
@@ -1514,7 +1515,7 @@ void WeatherRouting::BuildConfFilesList()
         wxLogError("Failed to load batch configuration xml: %s", m_confFilesInfoPath);
         if (logToConsole) {
             printf(
-              "Failed to load batch configuration xml: %s", m_confFilesInfoPath.mb_str().data()
+              "Failed to load batch configuration xml: %s\n", m_confFilesInfoPath.mb_str().data()
             );
         }
       } else {
@@ -1538,7 +1539,7 @@ void WeatherRouting::BuildConfFilesList()
       if (ignoredCnt > 0) {
         wxLogMessage("AUTOMATION: Ignored %d already processed routes", ignoredCnt);
         if (logToConsole) {
-          printf("Ignored %d already processed routes", ignoredCnt);
+          printf("Ignored %d already processed routes\n", ignoredCnt);
         }
       }
     }
