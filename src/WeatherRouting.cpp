@@ -703,7 +703,7 @@ void WeatherRouting::ProcessNextConfigFile()
   m_RoutesToRun = 0;
   // STEP1: Cleaning up old routes and positions
   wxLogMessage("AUTOMATION: Cleaning up old routes");
-  deleteAllTracks();
+  DeleteAllTracks();
   OnDeleteAllPositions(m_fakeEvent);
   OnDeleteAll(m_fakeEvent);
 
@@ -804,9 +804,9 @@ void WeatherRouting::ExportCompleted()
       printf("Exporting completed to %s\n", gpxFile.mb_str().data());
     }
     wxLogMessage("AUTOMATION: Exporting completed to %s", gpxFile);
-    exportGpx(gpxFile);
+    ExportGpx(gpxFile);
     wxLogMessage("AUTOMATION: Deleting all tracks");
-		deleteAllTracks();
+		DeleteAllTracks();
 	}
 
 	// STEP 2: Export all failed routes
@@ -832,9 +832,9 @@ void WeatherRouting::ExportCompleted()
         printf("Exporting failed routes to %s\n", gpxFile.mb_str().data());
       }
       wxLogMessage("AUTOMATION: Exporting failed to %s", gpxFile);
-      exportGpx(gpxFile);
+      ExportGpx(gpxFile);
       wxLogMessage("AUTOMATION: Deleting all tracks");
-      deleteAllTracks();
+      DeleteAllTracks();
     }
 
 	  // STEP 3: Export route infos as csv
@@ -860,7 +860,7 @@ void WeatherRouting::ExportCompleted()
       }
       wxLogMessage("AUTOMATION: Processed all files. Cleaning up.");
 		  batchRunning = false;
-		  deleteAllTracks();
+		  DeleteAllTracks();
 	  }
 
 }

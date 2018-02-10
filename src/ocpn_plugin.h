@@ -313,7 +313,7 @@ class DECL_EXP PlugInChartBase : public wxObject
             virtual int GetSize_Y();
             virtual void latlong_to_chartpix(double lat, double lon, double &pixx, double &pixy);
             virtual void chartpix_to_latlong(double pixx, double pixy, double *plat, double *plon);
-            
+
       protected:
             ChartTypeEnumPI     m_ChartType;
             ChartFamilyEnumPI   m_ChartFamily;
@@ -491,7 +491,7 @@ class DECL_EXP opencpn_plugin_111 : public opencpn_plugin_110
 public:
     opencpn_plugin_111(void *pmgr);
     virtual ~opencpn_plugin_111();
-    
+
 };
 
 class DECL_EXP opencpn_plugin_112 : public opencpn_plugin_111
@@ -499,10 +499,10 @@ class DECL_EXP opencpn_plugin_112 : public opencpn_plugin_111
 public:
     opencpn_plugin_112(void *pmgr);
     virtual ~opencpn_plugin_112();
-    
+
     virtual bool MouseEventHook( wxMouseEvent &event );
     virtual void SendVectorChartObjectInfo(wxString &chart, wxString &feature, wxString &objname, double lat, double lon, double scale, int nativescale);
-    
+
 };
 
 class DECL_EXP opencpn_plugin_113 : public opencpn_plugin_112
@@ -510,7 +510,7 @@ class DECL_EXP opencpn_plugin_113 : public opencpn_plugin_112
 public:
     opencpn_plugin_113(void *pmgr);
     virtual ~opencpn_plugin_113();
-    
+
     virtual bool KeyboardEventHook( wxKeyEvent &event );
     virtual void OnToolbarToolDownCallback(int id);
     virtual void OnToolbarToolUpCallback(int id);
@@ -665,14 +665,11 @@ extern "C"  DECL_EXP void JumpToPosition(double lat, double lon, double scale);
 
 
 // PERSONAL API ADDITIONS
-// CHANGE: useless function to test plugin-API
-extern "C" DECL_EXP void sayHi();
+// CHANGE
+extern "C" DECL_EXP void ExportGpx(wxString file_path);
 
 // CHANGE
-extern "C" DECL_EXP void exportGpx(wxString file_path);
-
-// CHANGE
-extern "C" DECL_EXP void deleteAllTracks();
+extern "C" DECL_EXP void DeleteAllTracks();
 
 
 /* API 1.9  adds some common cartographic functions to avoid unnecessary code duplication */
@@ -813,29 +810,29 @@ class DECL_EXP PlugInChartBaseExtended : public PlugInChartBase
 public:
     PlugInChartBaseExtended();
     virtual ~PlugInChartBaseExtended();
-    
+
     virtual int RenderRegionViewOnGL( const wxGLContext &glc, const PlugIn_ViewPort& VPoint,
                                       const wxRegion &Region, bool b_use_stencil );
-    
+
     virtual wxBitmap &RenderRegionViewOnDCNoText(  const PlugIn_ViewPort& VPoint, const wxRegion &Region);
     virtual bool RenderRegionViewOnDCTextOnly( wxMemoryDC &dc, const PlugIn_ViewPort& VPoint, const wxRegion &Region);
-    
+
     virtual int RenderRegionViewOnGLNoText( const wxGLContext &glc, const PlugIn_ViewPort& VPoint,
                                             const wxRegion &Region, bool b_use_stencil );
 
     virtual int RenderRegionViewOnGLTextOnly( const wxGLContext &glc, const PlugIn_ViewPort& VPoint,
                                               const wxRegion &Region, bool b_use_stencil );
-    
+
     virtual ListOfPI_S57Obj *GetObjRuleListAtLatLon(float lat, float lon, float select_radius, PlugIn_ViewPort *VPoint);
     virtual wxString CreateObjDescriptions( ListOfPI_S57Obj* obj_list );
-    
+
     virtual int GetNoCOVREntries();
     virtual int GetNoCOVRTablePoints(int iTable);
     virtual int  GetNoCOVRTablenPoints(int iTable);
     virtual float *GetNoCOVRTableHead(int iTable);
-    
+
     virtual void ClearPLIBTextList();
-    
+
 };
 
 
@@ -901,7 +898,7 @@ public:
     float               lon_min;
     int                 type;
     void                *private0;
-   
+
     PI_line_segment_element *next;
 };
 
@@ -974,7 +971,7 @@ public:
       double                  y_rate;                 // to be used in GetPointPix() and friends
       double                  x_origin;               // on a per-object basis if necessary
       double                  y_origin;
-      
+
       int auxParm0;                                   // some per-object auxiliary parameters, used for OpenGL
       int auxParm1;
       int auxParm2;
@@ -1038,7 +1035,7 @@ int DECL_EXP PI_PLIBRenderObjectToGL( const wxGLContext &glcc, PI_S57Obj *pObj,
       glNewList(dl, GL_COMPILE_AND_EXECUTE);
       ... // use norm_viewport with GetCanvasLLPix here
       glEndList();
-   }      
+   }
    glPopMatrix();
    ... // use current_viewport with GetCanvasLLPix again
 */
@@ -1122,24 +1119,24 @@ enum OCPN_DLDialogStyle
     OCPN_DLDS_SPEED = 0x0008,              //!< The dialog shows the transfer speed.
     OCPN_DLDS_SIZE = 0x0010,               //!< The dialog shows the size of the resource to download/upload.
     OCPN_DLDS_URL = 0x0020,                //!< The dialog shows the URL involved in the transfer.
-    
+
     // styles related to the use of wxCurlConnectionSettingsDialog:
-    
+
     OCPN_DLDS_CONN_SETTINGS_AUTH = 0x0040,  //!< The dialog allows the user to change the authentication settings.
     OCPN_DLDS_CONN_SETTINGS_PORT = 0x0080,  //!< The dialog allows the user to change the port for the transfer.
     OCPN_DLDS_CONN_SETTINGS_PROXY = 0x0100, //!< The dialog allows the user to change the proxy settings.
-    
+
     OCPN_DLDS_CONN_SETTINGS_ALL = OCPN_DLDS_CONN_SETTINGS_AUTH|OCPN_DLDS_CONN_SETTINGS_PORT|OCPN_DLDS_CONN_SETTINGS_PROXY,
-    
+
     OCPN_DLDS_SHOW_ALL =OCPN_DLDS_ELAPSED_TIME|OCPN_DLDS_ESTIMATED_TIME|OCPN_DLDS_REMAINING_TIME|
     OCPN_DLDS_SPEED|OCPN_DLDS_SIZE|OCPN_DLDS_URL|OCPN_DLDS_CONN_SETTINGS_ALL,
-    
+
     OCPN_DLDS_CAN_ABORT = 0x0200,          //!< The transfer can be aborted by the user.
     OCPN_DLDS_CAN_START = 0x0400,          //!< The transfer won't start automatically. The user needs to start it.
     OCPN_DLDS_CAN_PAUSE = 0x0800,          //!< The transfer can be paused.
-    
+
     OCPN_DLDS_AUTO_CLOSE = 0x1000,         //!< The dialog auto closes when transfer is complete.
-    
+
     // by default all available features are enabled:
     OCPN_DLDS_DEFAULT_STYLE = OCPN_DLDS_CAN_START|OCPN_DLDS_CAN_PAUSE|OCPN_DLDS_CAN_ABORT|OCPN_DLDS_SHOW_ALL|OCPN_DLDS_AUTO_CLOSE
 };
@@ -1148,8 +1145,8 @@ enum OCPN_DLDialogStyle
 
 /*   Synchronous (Blocking) download of a single file  */
 
-extern DECL_EXP _OCPN_DLStatus OCPN_downloadFile( const wxString& url, const wxString &outputFile, 
-                                       const wxString &title, const wxString &message, 
+extern DECL_EXP _OCPN_DLStatus OCPN_downloadFile( const wxString& url, const wxString &outputFile,
+                                       const wxString &title, const wxString &message,
                                        const wxBitmap& bitmap,
                                        wxWindow *parent, long style, int timeout_secs);
 
@@ -1172,14 +1169,14 @@ extern DECL_EXP bool OCPN_isOnline();
 /*  Supporting  Event for Background downloading          */
 /*  OCPN_downloadEvent Definition  */
 
-/*  PlugIn should be ready/able to handle this event after initiating a background file transfer  
- * 
+/*  PlugIn should be ready/able to handle this event after initiating a background file transfer
+ *
  * The event as received should be parsed primarily by the getDLEventCondition() method.
  * This will allow identification of download start, progress, and end states.
- * 
+ *
  * Other accessor methods contain status, byte counts, etc.
- * 
- * A PlugIn may safely destroy its EvtHandler after receipt of an OCPN_downloadEvent with 
+ *
+ * A PlugIn may safely destroy its EvtHandler after receipt of an OCPN_downloadEvent with
  *     getDLEventCondition == OCPN_DL_EVENT_TYPE_END
  */
 
@@ -1188,30 +1185,30 @@ class DECL_EXP OCPN_downloadEvent: public wxEvent
 public:
     OCPN_downloadEvent( wxEventType commandType = wxEVT_NULL, int id = 0 );
     ~OCPN_downloadEvent( );
-    
+
     // accessors
     _OCPN_DLStatus getDLEventStatus(){ return m_stat; }
     OCPN_DLCondition getDLEventCondition(){ return m_condition; }
-    
+
     void setDLEventStatus( _OCPN_DLStatus stat ){ m_stat = stat; }
     void setDLEventCondition( OCPN_DLCondition cond ){ m_condition = cond; }
-    
+
     void setTotal( long bytes ){m_totalBytes = bytes; }
     void setTransferred( long bytes ){m_sofarBytes = bytes; }
     long getTotal(){ return m_totalBytes; }
     long getTransferred(){ return m_sofarBytes; }
-    
+
     void setComplete(bool b_complete){ m_b_complete = b_complete; }
     bool getComplete(){ return m_b_complete; }
-    
-    
+
+
     // required for sending with wxPostEvent()
     wxEvent *Clone() const;
-    
+
 private:
     OCPN_DLStatus m_stat;
     OCPN_DLCondition m_condition;
-    
+
     long m_totalBytes;
     long m_sofarBytes;
     bool m_b_complete;
